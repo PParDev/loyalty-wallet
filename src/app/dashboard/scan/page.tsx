@@ -15,6 +15,8 @@ export default function ScanPage() {
   const [pointsInput, setPointsInput] = useState("");
   const [amountInput, setAmountInput] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState("");
+  const [scanMode, setScanMode] = useState<"camera" | "manual">("camera");
 
   const handleScan = async (qrCodeData: string) => {
     setError(null);
@@ -71,6 +73,13 @@ export default function ScanPage() {
     }
   };
 
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualInput.trim()) return;
+    await handleScan(manualInput.trim());
+    setManualInput("");
+  };
+
   const reset = () => {
     setState("scanning");
     setScanResult(null);
@@ -78,6 +87,7 @@ export default function ScanPage() {
     setFeedback(null);
     setPointsInput("");
     setAmountInput("");
+    setManualInput("");
   };
 
   return (
@@ -97,11 +107,54 @@ export default function ScanPage() {
       )}
 
       {state === "scanning" && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <QrScanner onScan={handleScan} />
-          <div className="p-4 text-center text-sm text-gray-500">
-            Apunta la cámara al QR de la tarjeta del cliente
+        <div className="space-y-4">
+          {/* Tabs */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white">
+            <button
+              onClick={() => setScanMode("camera")}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${scanMode === "camera" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              Cámara
+            </button>
+            <button
+              onClick={() => setScanMode("manual")}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${scanMode === "manual" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              Código manual
+            </button>
           </div>
+
+          {scanMode === "camera" ? (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <QrScanner onScan={handleScan} />
+              <div className="p-4 text-center text-sm text-gray-500">
+                Apunta la cámara al QR de la tarjeta del cliente
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <p className="text-sm text-gray-500 mb-4">
+                Ingresa el código de la tarjeta manualmente (formato: <span className="font-mono text-gray-700">LW:...</span>)
+              </p>
+              <form onSubmit={handleManualSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  placeholder="LW:550e8400-..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!manualInput.trim()}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  Buscar tarjeta
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
