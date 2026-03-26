@@ -28,13 +28,16 @@ export async function createOrUpdateLoyaltyClass(businessId: string) {
   const program = business.loyaltyPrograms[0];
   const classId = `${ISSUER_ID}.business_${businessId}`;
 
+  const logoUri = business.logoUrl ?? "https://placehold.co/128x128/1a1a2e/ffffff.png";
+
   const loyaltyClass = {
     id: classId,
     issuerName: business.name,
     programName: program.name,
-    programLogo: business.logoUrl
-      ? { sourceUri: { uri: business.logoUrl }, contentDescription: { defaultValue: { language: "es", value: business.name } } }
-      : undefined,
+    programLogo: {
+      sourceUri: { uri: logoUri },
+      contentDescription: { defaultValue: { language: "es", value: business.name } },
+    },
     hexBackgroundColor: program.cardBgColor,
     reviewStatus: "UNDER_REVIEW",
     locations: business.latitude && business.longitude
@@ -49,27 +52,30 @@ export async function createOrUpdateLoyaltyClass(businessId: string) {
     headers: { Authorization: `Bearer ${token.token}` },
   });
 
+  console.log("[GW] checking class:", classId);
   if (checkRes.ok) {
+    console.log("[GW] class exists, patching");
     const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyClass/${classId}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyClass),
     });
+    console.log("[GW] PATCH class status:", patchRes.status);
     if (!patchRes.ok) console.error("[GW] PATCH class error:", await patchRes.text());
   } else {
+    console.log("[GW] class not found (status:", checkRes.status, "), creating...");
     const postRes = await fetch(`${WALLET_API_BASE}/loyaltyClass`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyClass),
     });
+    const postBody = await postRes.text();
+    console.log("[GW] POST class status:", postRes.status, "body:", postBody);
     if (!postRes.ok) {
-      const err = await postRes.text();
-      console.error("[GW] POST class error:", err);
-      throw new Error(`Class creation failed: ${err}`);
+      throw new Error(`Class creation failed (${postRes.status}): ${postBody}`);
     }
   }
 
-  console.log("[GW] classId:", classId);
   return classId;
 }
 
@@ -137,13 +143,14 @@ export async function createOrUpdateLoyaltyObject(cardId: string): Promise<strin
   const serviceAccountEmail = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL!;
   const serviceAccountKey = JSON.parse(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY!);
 
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
   const claims = {
     iss: serviceAccountEmail,
     aud: "google",
-    origins: [process.env.NEXT_PUBLIC_APP_URL!],
+    origins: [appUrl],
     typ: "savetowallet",
     payload: {
-      loyaltyObjects: [{ id: objectId }],
+      loyaltyObjects: [loyaltyObject],
     },
   };
 
