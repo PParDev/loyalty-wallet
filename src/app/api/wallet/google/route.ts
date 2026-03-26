@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { createOrUpdateLoyaltyObject } from "@/lib/google-wallet";
+import { createOrUpdateLoyaltyClass, createOrUpdateLoyaltyObject } from "@/lib/google-wallet";
 import type { ApiResponse } from "@/types";
 
 const schema = z.object({ cardId: z.string().uuid() });
@@ -11,9 +11,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { cardId } = schema.parse(body);
 
-    const card = await prisma.loyaltyCard.findUnique({ where: { id: cardId } });
+    const card = await prisma.loyaltyCard.findUnique({
+      where: { id: cardId },
+      include: { program: true },
+    });
     if (!card) return NextResponse.json<ApiResponse>({ success: false, error: "Tarjeta no encontrada" }, { status: 404 });
 
+    await createOrUpdateLoyaltyClass(card.program.businessId);
     const saveUrl = await createOrUpdateLoyaltyObject(cardId);
     if (!saveUrl) {
       return NextResponse.json<ApiResponse>({ success: false, error: "Error generando el pase de Google Wallet" }, { status: 500 });
