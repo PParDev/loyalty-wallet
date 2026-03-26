@@ -16,13 +16,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { qrCodeData } = schema.parse(body);
 
-    const cardId = parseQrData(qrCodeData);
-    if (!cardId) {
+    if (!parseQrData(qrCodeData)) {
       return NextResponse.json<ApiResponse>({ success: false, error: "QR inválido" }, { status: 400 });
     }
 
     const card = await prisma.loyaltyCard.findUnique({
-      where: { id: cardId },
+      where: { qrCodeData },
       include: {
         customer: true,
         program: {
