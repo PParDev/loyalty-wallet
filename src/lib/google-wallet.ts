@@ -50,19 +50,26 @@ export async function createOrUpdateLoyaltyClass(businessId: string) {
   });
 
   if (checkRes.ok) {
-    await fetch(`${WALLET_API_BASE}/loyaltyClass/${classId}`, {
+    const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyClass/${classId}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyClass),
     });
+    if (!patchRes.ok) console.error("[GW] PATCH class error:", await patchRes.text());
   } else {
-    await fetch(`${WALLET_API_BASE}/loyaltyClass`, {
+    const postRes = await fetch(`${WALLET_API_BASE}/loyaltyClass`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyClass),
     });
+    if (!postRes.ok) {
+      const err = await postRes.text();
+      console.error("[GW] POST class error:", err);
+      throw new Error(`Class creation failed: ${err}`);
+    }
   }
 
+  console.log("[GW] classId:", classId);
   return classId;
 }
 
@@ -104,18 +111,25 @@ export async function createOrUpdateLoyaltyObject(cardId: string): Promise<strin
     headers: { Authorization: `Bearer ${token.token}` },
   });
 
+  console.log("[GW] objectId:", objectId, "classId:", classId);
   if (checkRes.ok) {
-    await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
+    const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyObject),
     });
+    if (!patchRes.ok) console.error("[GW] PATCH object error:", await patchRes.text());
   } else {
-    await fetch(`${WALLET_API_BASE}/loyaltyObject`, {
+    const postRes = await fetch(`${WALLET_API_BASE}/loyaltyObject`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(loyaltyObject),
     });
+    if (!postRes.ok) {
+      const err = await postRes.text();
+      console.error("[GW] POST object error:", err);
+      throw new Error(`Object creation failed: ${err}`);
+    }
   }
 
   // Generar JWT para el botón "Add to Google Wallet"
