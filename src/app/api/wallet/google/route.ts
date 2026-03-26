@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       await prisma.loyaltyCard.update({ where: { id: cardId }, data: { googlePassId: cardId } });
     }
 
-    return NextResponse.json<ApiResponse>({ success: true, data: { saveUrl } });
+    return NextResponse.json<ApiResponse>({ success: true, data: { saveUrl, debug: { cardId, businessId: card.program.businessId } } });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json<ApiResponse>({ success: false, error: err.issues[0].message }, { status: 400 });
