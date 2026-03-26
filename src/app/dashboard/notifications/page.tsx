@@ -83,35 +83,35 @@ export default function NotificationsPage() {
           {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
           <form onSubmit={handleSend} className="space-y-3">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Título *</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Título *</label>
               <input
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 maxLength={100}
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Mensaje *</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Mensaje *</label>
               <textarea
                 required
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 maxLength={500}
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">
+              <label className="text-sm font-medium text-gray-700 block mb-1">
                 Programar para (vacío = enviar ahora)
               </label>
               <input
                 type="datetime-local"
                 value={form.scheduledAt}
                 onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div className="flex gap-2 pt-2">

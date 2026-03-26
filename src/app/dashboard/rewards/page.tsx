@@ -94,20 +94,20 @@ export default function RewardsPage() {
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Nombre *</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Nombre *</label>
                 <input
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Tipo</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Tipo</label>
                 <select
                   value={form.rewardType}
                   onChange={(e) => setForm({ ...form, rewardType: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="freebie">Gratis</option>
                   <option value="discount">Descuento</option>
@@ -116,33 +116,33 @@ export default function RewardsPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Descripción</label>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Descripción</label>
               <input
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Puntos requeridos *</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Puntos requeridos *</label>
                 <input
                   required
                   type="number"
                   min="1"
                   value={form.pointsRequired}
                   onChange={(e) => setForm({ ...form, pointsRequired: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Máx. canjes (vacío = ilimitado)</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Máx. canjes (vacío = ilimitado)</label>
                 <input
                   type="number"
                   min="1"
                   value={form.maxRedemptions}
                   onChange={(e) => setForm({ ...form, maxRedemptions: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
