@@ -142,13 +142,13 @@ export default function ScanPage() {
                   value={manualInput}
                   onChange={(e) => setManualInput(e.target.value)}
                   placeholder="LW:550e8400-..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={!manualInput.trim()}
-                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+                  className="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold text-base hover:bg-indigo-700 disabled:opacity-50"
                 >
                   Buscar tarjeta
                 </button>
