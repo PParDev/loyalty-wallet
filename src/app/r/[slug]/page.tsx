@@ -199,6 +199,14 @@ export default function RegisterClientPage({ params }: { params: Promise<{ slug:
           </p>
 
           <div className="space-y-3">
+            {cardId && (
+              <a
+                href={`/card/${cardId}`}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-3.5 rounded-xl font-semibold text-base hover:bg-indigo-700"
+              >
+                Ver mi tarjeta
+              </a>
+            )}
             {googleWalletUrl && (
               <a
                 href={googleWalletUrl}
