@@ -58,7 +58,7 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
   const classId = `${ISSUER_ID}.business_${businessId}`;
   const logoUri = business.logoUrl ?? "https://placehold.co/128x128/1a1a2e/ffffff.png";
 
-  const loyaltyClass = {
+  const loyaltyClass: Record<string, unknown> = {
     id: classId,
     issuerName: business.name,
     programName: program.name,
@@ -68,10 +68,11 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     },
     hexBackgroundColor: program.cardBgColor,
     reviewStatus: "UNDER_REVIEW",
-    locations: business.latitude && business.longitude
-      ? [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }]
-      : [],
   };
+
+  if (business.latitude && business.longitude) {
+    loyaltyClass.locations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
+  }
 
   await upsert(`${WALLET_API_BASE}/loyaltyClass`, loyaltyClass, token);
   return classId;
