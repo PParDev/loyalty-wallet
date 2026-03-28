@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getToken, sendNotificationToWalletCards } from "@/lib/google-wallet";
 import type { ApiResponse } from "@/types";
 
 export async function GET() {
@@ -48,9 +49,27 @@ export async function POST(req: Request) {
       },
     });
 
-    // TODO: integrar con servicio de push real (FCM/APNs)
     if (!isScheduled) {
-      console.log(`[Notification] Enviando: ${data.title} al negocio ${session.user.businessId}`);
+      try {
+        const token = await getToken();
+        const sentCount = await sendNotificationToWalletCards(
+          session.user.businessId,
+          data.title,
+          data.message,
+          token
+        );
+        await prisma.notification.update({
+          where: { id: notification.id },
+          data: { sentCount },
+        });
+        return NextResponse.json<ApiResponse>({
+          success: true,
+          data: { ...notification, sentCount },
+        }, { status: 201 });
+      } catch (err) {
+        console.error("[Notification] Error enviando a Google Wallet:", err);
+        // La notificación ya quedó guardada, no fallar la respuesta completa
+      }
     }
 
     return NextResponse.json<ApiResponse>({ success: true, data: notification }, { status: 201 });

@@ -146,4 +146,35 @@ export async function updateCardPoints(cardId: string): Promise<void> {
   });
 }
 
+export async function sendNotificationToWalletCards(
+  businessId: string,
+  title: string,
+  message: string,
+  token: string
+): Promise<number> {
+  const cards = await prisma.loyaltyCard.findMany({
+    where: {
+      program: { businessId, isActive: true },
+      googlePassId: { not: null },
+    },
+    select: { googlePassId: true },
+  });
+
+  if (cards.length === 0) return 0;
+
+  const results = await Promise.allSettled(
+    cards.map((card) =>
+      fetch(`${WALLET_API_BASE}/loyaltyObject/${card.googlePassId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ header: title, body: message, messageType: "TEXT_AND_NOTIFY" }],
+        }),
+      })
+    )
+  );
+
+  return results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
+}
+
 export { getToken };
