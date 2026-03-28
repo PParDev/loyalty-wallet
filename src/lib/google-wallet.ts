@@ -71,7 +71,7 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
   };
 
   if (business.latitude && business.longitude) {
-    loyaltyClass.locations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
+    loyaltyClass.merchantLocations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
   }
 
   await upsert(`${WALLET_API_BASE}/loyaltyClass`, loyaltyClass, token);
@@ -164,11 +164,11 @@ export async function sendNotificationToWalletCards(
 
   const results = await Promise.allSettled(
     cards.map((card) =>
-      fetch(`${WALLET_API_BASE}/loyaltyObject/${card.googlePassId}`, {
-        method: "PATCH",
+      fetch(`${WALLET_API_BASE}/loyaltyObject/${card.googlePassId}/addMessage`, {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [{ header: title, body: message, messageType: "TEXT_AND_NOTIFY" }],
+          message: { header: title, body: message, messageType: "TEXT_AND_NOTIFY" },
         }),
       })
     )
