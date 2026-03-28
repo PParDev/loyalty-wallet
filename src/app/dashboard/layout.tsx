@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const IconChart = () => (
@@ -65,10 +65,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/businesses/me")
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && res.data?.isActive === false) setSuspended(true);
+      });
+  }, [status]);
 
   if (status === "loading") {
     return (
@@ -123,6 +133,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Contenido */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
+        {suspended && (
+          <div className="bg-red-600 text-white px-4 py-3 text-sm text-center font-medium">
+            Tu cuenta está suspendida. Contacta a soporte para reactivarla.
+          </div>
+        )}
         {children}
       </main>
 

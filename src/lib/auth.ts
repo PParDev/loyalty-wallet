@@ -19,12 +19,17 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.businessUser.findUnique({
           where: { email: credentials.email },
+          include: { business: true },
         });
 
         if (!user) return null;
 
         const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
+
+        if (!user.business.isActive) {
+          throw new Error("SUSPENDED");
+        }
 
         return {
           id: user.id,

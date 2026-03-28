@@ -26,12 +26,15 @@ export async function POST(
 
     const card = await prisma.loyaltyCard.findUnique({
       where: { id: cardId },
-      include: { program: true },
+      include: { program: { include: { business: true } } },
     });
 
     if (!card) return NextResponse.json<ApiResponse>({ success: false, error: "Tarjeta no encontrada" }, { status: 404 });
     if (card.program.businessId !== session.user.businessId) {
       return NextResponse.json<ApiResponse>({ success: false, error: "Sin permisos" }, { status: 403 });
+    }
+    if (!card.program.business.isActive) {
+      return NextResponse.json<ApiResponse>({ success: false, error: "Negocio suspendido" }, { status: 403 });
     }
 
     // Calcular puntos a sumar

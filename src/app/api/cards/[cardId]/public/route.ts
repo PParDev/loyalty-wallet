@@ -19,6 +19,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ cardId:
     return NextResponse.json<ApiResponse>({ success: false, error: "Tarjeta no encontrada" }, { status: 404 });
   }
 
+  if (!card.program.business.isActive) {
+    return NextResponse.json<ApiResponse>({ success: false, error: "SUSPENDED" }, { status: 403 });
+  }
+
   return NextResponse.json<ApiResponse>({
     success: true,
     data: {

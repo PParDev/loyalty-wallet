@@ -21,7 +21,7 @@ export async function POST(
     const { rewardId } = schema.parse(body);
 
     const [card, reward] = await Promise.all([
-      prisma.loyaltyCard.findUnique({ where: { id: cardId }, include: { program: true } }),
+      prisma.loyaltyCard.findUnique({ where: { id: cardId }, include: { program: { include: { business: true } } } }),
       prisma.reward.findUnique({ where: { id: rewardId } }),
     ]);
 
@@ -29,6 +29,9 @@ export async function POST(
     if (!reward) return NextResponse.json<ApiResponse>({ success: false, error: "Recompensa no encontrada" }, { status: 404 });
     if (card.program.businessId !== session.user.businessId) {
       return NextResponse.json<ApiResponse>({ success: false, error: "Sin permisos" }, { status: 403 });
+    }
+    if (!card.program.business.isActive) {
+      return NextResponse.json<ApiResponse>({ success: false, error: "Negocio suspendido" }, { status: 403 });
     }
     if (!reward.isActive) {
       return NextResponse.json<ApiResponse>({ success: false, error: "Recompensa no disponible" }, { status: 400 });

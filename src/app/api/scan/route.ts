@@ -26,6 +26,7 @@ export async function POST(req: Request) {
         customer: true,
         program: {
           include: {
+            business: true,
             rewards: { where: { isActive: true }, orderBy: { pointsRequired: "asc" } },
           },
         },
@@ -34,6 +35,10 @@ export async function POST(req: Request) {
 
     if (!card) {
       return NextResponse.json<ApiResponse>({ success: false, error: "Tarjeta no encontrada" }, { status: 404 });
+    }
+
+    if (!card.program.business.isActive) {
+      return NextResponse.json<ApiResponse>({ success: false, error: "Este negocio está suspendido" }, { status: 403 });
     }
 
     // Verificar que la tarjeta pertenece al negocio del cajero

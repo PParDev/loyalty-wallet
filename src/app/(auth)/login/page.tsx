@@ -24,6 +24,9 @@ export default function LoginPage() {
 
     if (res?.ok) {
       router.push("/dashboard");
+    } else if (res?.error === "SUSPENDED") {
+      setError("Tu cuenta está suspendida. Contacta a soporte para reactivarla.");
+      setLoading(false);
     } else {
       setError("Correo o contraseña incorrectos");
       setLoading(false);
