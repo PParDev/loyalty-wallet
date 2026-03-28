@@ -4,20 +4,49 @@ import { prisma } from "@/lib/prisma";
 const WALLET_API_BASE = "https://walletobjects.googleapis.com/walletobjects/v1";
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID!;
 
-function getAuth() {
+async function getToken(): Promise<string> {
   const credentials = JSON.parse(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY!);
-  return new GoogleAuth({
+  const auth = new GoogleAuth({
     credentials,
     scopes: ["https://www.googleapis.com/auth/wallet_object.issuer"],
   });
+  const client = await auth.getClient();
+  const result = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken();
+  return result.token;
 }
 
-async function getAuthClient() {
-  const auth = getAuth();
-  return auth.getClient();
+async function upsert(url: string, body: object, token: string): Promise<void> {
+  const postRes = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (postRes.ok) return;
+
+  const text = await postRes.text();
+
+  // Si ya existe, hacer PATCH
+  if (postRes.status === 409 || text.includes("already exists") || text.includes("ALREADY_EXISTS")) {
+    const id = (body as { id: string }).id;
+    const patchRes = await fetch(`${url}/${id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!patchRes.ok) {
+      const patchErr = await patchRes.text();
+      console.error("[GW] PATCH error:", patchErr);
+      throw new Error(`PATCH failed (${patchRes.status}): ${patchErr}`);
+    }
+    return;
+  }
+
+  console.error("[GW] POST error:", text);
+  throw new Error(`POST failed (${postRes.status}): ${text}`);
 }
 
-export async function createOrUpdateLoyaltyClass(businessId: string) {
+export async function createOrUpdateLoyaltyClass(businessId: string, token: string): Promise<string | null> {
   const business = await prisma.business.findUnique({
     where: { id: businessId },
     include: { loyaltyPrograms: { where: { isActive: true }, take: 1 } },
@@ -27,7 +56,6 @@ export async function createOrUpdateLoyaltyClass(businessId: string) {
 
   const program = business.loyaltyPrograms[0];
   const classId = `${ISSUER_ID}.business_${businessId}`;
-
   const logoUri = business.logoUrl ?? "https://placehold.co/128x128/1a1a2e/ffffff.png";
 
   const loyaltyClass = {
@@ -45,41 +73,11 @@ export async function createOrUpdateLoyaltyClass(businessId: string) {
       : [],
   };
 
-  const client = await getAuthClient();
-  const token = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken();
-
-  const checkRes = await fetch(`${WALLET_API_BASE}/loyaltyClass/${classId}`, {
-    headers: { Authorization: `Bearer ${token.token}` },
-  });
-
-  console.log("[GW] checking class:", classId);
-  if (checkRes.ok) {
-    console.log("[GW] class exists, patching");
-    const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyClass/${classId}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(loyaltyClass),
-    });
-    console.log("[GW] PATCH class status:", patchRes.status);
-    if (!patchRes.ok) console.error("[GW] PATCH class error:", await patchRes.text());
-  } else {
-    console.log("[GW] class not found (status:", checkRes.status, "), creating...");
-    const postRes = await fetch(`${WALLET_API_BASE}/loyaltyClass`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(loyaltyClass),
-    });
-    const postBody = await postRes.text();
-    console.log("[GW] POST class status:", postRes.status, "body:", postBody);
-    if (!postRes.ok) {
-      throw new Error(`Class creation failed (${postRes.status}): ${postBody}`);
-    }
-  }
-
+  await upsert(`${WALLET_API_BASE}/loyaltyClass`, loyaltyClass, token);
   return classId;
 }
 
-export async function createOrUpdateLoyaltyObject(cardId: string): Promise<string | null> {
+export async function createOrUpdateLoyaltyObject(cardId: string, token: string): Promise<string | null> {
   const card = await prisma.loyaltyCard.findUnique({
     where: { id: cardId },
     include: {
@@ -110,40 +108,13 @@ export async function createOrUpdateLoyaltyObject(cardId: string): Promise<strin
     accountName: card.customer.name,
   };
 
-  const client = await getAuthClient();
-  const token = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken();
+  await upsert(`${WALLET_API_BASE}/loyaltyObject`, loyaltyObject, token);
 
-  const checkRes = await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
-    headers: { Authorization: `Bearer ${token.token}` },
-  });
-
-  console.log("[GW] objectId:", objectId, "classId:", classId);
-  if (checkRes.ok) {
-    const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(loyaltyObject),
-    });
-    if (!patchRes.ok) console.error("[GW] PATCH object error:", await patchRes.text());
-  } else {
-    const postRes = await fetch(`${WALLET_API_BASE}/loyaltyObject`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(loyaltyObject),
-    });
-    if (!postRes.ok) {
-      const err = await postRes.text();
-      console.error("[GW] POST object error:", err);
-      throw new Error(`Object creation failed: ${err}`);
-    }
-  }
-
-  // Generar JWT para el botón "Add to Google Wallet"
   const { sign } = await import("jsonwebtoken");
   const serviceAccountEmail = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL!;
   const serviceAccountKey = JSON.parse(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY!);
-
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+
   const claims = {
     iss: serviceAccountEmail,
     aud: "google",
@@ -162,15 +133,16 @@ export async function updateCardPoints(cardId: string): Promise<void> {
   const card = await prisma.loyaltyCard.findUnique({ where: { id: cardId } });
   if (!card?.googlePassId) return;
 
+  const token = await getToken();
   const objectId = `${ISSUER_ID}.card_${cardId}`;
-  const client = await getAuthClient();
-  const token = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken();
 
   await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
     method: "PATCH",
-    headers: { Authorization: `Bearer ${token.token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       loyaltyPoints: { balance: { int: card.currentPoints } },
     }),
   });
 }
+
+export { getToken };
