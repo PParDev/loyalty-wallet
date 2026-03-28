@@ -64,10 +64,9 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     programName: program.name,
     programLogo: {
       sourceUri: { uri: logoUri },
-      contentDescription: { defaultValue: { language: "es", value: business.name } },
+      contentDescription: { defaultValue: { language: "en-US", value: business.name } },
     },
     hexBackgroundColor: program.cardBgColor,
-    reviewStatus: "UNDER_REVIEW",
   };
 
   if (business.latitude && business.longitude) {
