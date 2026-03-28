@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { SignJWT } from "jose";
 import { z } from "zod";
+import { createHmac, randomBytes } from "crypto";
 
 const schema = z.object({ email: z.string().email(), password: z.string() });
+
+function makeToken(email: string): string {
+  const secret = process.env.NEXTAUTH_SECRET!;
+  const payload = `${email}:superadmin:${Date.now()}`;
+  const sig = createHmac("sha256", secret).update(payload).digest("hex");
+  return Buffer.from(`${payload}:${sig}`).toString("base64url");
+}
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -15,16 +22,15 @@ export async function POST(req: Request) {
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
 
-  if (!adminEmail || !adminPassword || email !== adminEmail || password !== adminPassword) {
+  if (!adminEmail || !adminPassword) {
+    return NextResponse.json({ success: false, error: "Admin no configurado en el servidor" }, { status: 500 });
+  }
+
+  if (email !== adminEmail || password !== adminPassword) {
     return NextResponse.json({ success: false, error: "Credenciales incorrectas" }, { status: 401 });
   }
 
-  const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET!);
-  const token = await new SignJWT({ role: "superadmin" })
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("12h")
-    .sign(secret);
-
+  const token = makeToken(email);
   const res = NextResponse.json({ success: true });
   res.cookies.set("admin_token", token, {
     httpOnly: true,
