@@ -65,8 +65,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [suspended, setSuspended] = useState(false);
-
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
@@ -76,7 +74,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetch("/api/businesses/me")
       .then((r) => r.json())
       .then((res) => {
-        if (res.success && res.data?.isActive === false) setSuspended(true);
+        if (res.success && res.data?.isActive === false) {
+          signOut({ callbackUrl: "/login?suspended=true" });
+        }
       });
   }, [status]);
 
@@ -133,11 +133,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Contenido */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
-        {suspended && (
-          <div className="bg-red-600 text-white px-4 py-3 text-sm text-center font-medium">
-            Tu cuenta está suspendida. Contacta a soporte para reactivarla.
-          </div>
-        )}
         {children}
       </main>
 

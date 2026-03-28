@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     if (!passBuffer) return new NextResponse("Error generando el pase de Apple Wallet", { status: 500 });
 
     if (!card.applePassSerial) {
-      await prisma.loyaltyCard.update({ where: { id: cardId }, data: { applePassSerial: cardId } });
+      await prisma.loyaltyCard.update({ where: { id: cardId }, data: { applePassSerial: `${process.env.APPLE_PASS_TYPE_ID}.${cardId}` } });
     }
 
     return new NextResponse(passBuffer as unknown as BodyInit, {

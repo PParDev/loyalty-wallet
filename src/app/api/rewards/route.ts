@@ -16,7 +16,7 @@ export async function GET() {
   if (!program) return NextResponse.json<ApiResponse>({ success: true, data: [] });
 
   const rewards = await prisma.reward.findMany({
-    where: { programId: program.id },
+    where: { programId: program.id, isActive: true },
     orderBy: { pointsRequired: "asc" },
   });
 

@@ -9,8 +9,10 @@ export async function GET(req: Request) {
   if (!session) return NextResponse.json<ApiResponse>({ success: false, error: "No autorizado" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") ?? "1");
-  const limit = parseInt(searchParams.get("limit") ?? "20");
+  const rawPage = parseInt(searchParams.get("page") ?? "1");
+  const rawLimit = parseInt(searchParams.get("limit") ?? "20");
+  const page = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+  const limit = isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 100);
   const search = searchParams.get("search") ?? "";
 
   const program = await prisma.loyaltyProgram.findFirst({

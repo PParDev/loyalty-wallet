@@ -27,7 +27,8 @@ export async function POST(req: Request) {
     }
 
     if (!card.googlePassId) {
-      await prisma.loyaltyCard.update({ where: { id: cardId }, data: { googlePassId: cardId } });
+      const objectId = `${process.env.GOOGLE_WALLET_ISSUER_ID}.card_${cardId}`;
+      await prisma.loyaltyCard.update({ where: { id: cardId }, data: { googlePassId: objectId } });
     }
 
     return NextResponse.json<ApiResponse>({ success: true, data: { saveUrl } });
