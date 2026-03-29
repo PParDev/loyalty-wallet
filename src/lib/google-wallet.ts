@@ -157,34 +157,31 @@ export async function sendNotificationToWalletCards(
       program: { businessId, isActive: true },
       googlePassId: { not: null },
     },
-    select: { googlePassId: true },
+    select: { id: true },
   });
-
-  console.log(`[Notify] Tarjetas con googlePassId: ${cards.length}`);
-  cards.forEach((c) => console.log(`[Notify] passId: ${c.googlePassId}`));
 
   if (cards.length === 0) return 0;
 
   const results = await Promise.allSettled(
     cards.map(async (card) => {
-      const url = `${WALLET_API_BASE}/loyaltyObject/${card.googlePassId}/addMessage`;
-      const body = { message: { header: title, body: message, messageType: "TEXT_AND_NOTIFY" } };
-      console.log(`[Notify] POST ${url}`);
-      console.log(`[Notify] body: ${JSON.stringify(body)}`);
+      const objectId = `${ISSUER_ID}.card_${card.id}`;
+      const url = `${WALLET_API_BASE}/loyaltyObject/${objectId}/addMessage`;
       const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          message: { header: title, body: message, messageType: "TEXT_AND_NOTIFY" },
+        }),
       });
-      const text = await res.text();
-      console.log(`[Notify] status: ${res.status} — response: ${text.slice(0, 300)}`);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`[Notify] Error ${res.status} para ${objectId}: ${text.slice(0, 200)}`);
+      }
       return res;
     })
   );
 
-  const successCount = results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
-  console.log(`[Notify] Enviadas: ${successCount}/${cards.length}`);
-  return successCount;
+  return results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
 }
 
 export { getToken };
