@@ -74,6 +74,20 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     loyaltyClass.merchantLocations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
   }
 
+  // Botones interactivos en la tarjeta
+  const uris: { uri: string; description: string; id: string }[] = [];
+
+  if (business.phone) {
+    const digits = business.phone.replace(/\D/g, "");
+    // Si ya tiene código de país (52 para México) no lo duplicamos
+    const waPhone = digits.startsWith("52") ? digits : `52${digits}`;
+    uris.push({ uri: `https://wa.me/${waPhone}`, description: "Escribir por WhatsApp", id: "whatsapp" });
+  }
+
+  if (uris.length > 0) {
+    loyaltyClass.linksModuleData = { uris };
+  }
+
   await upsert(`${WALLET_API_BASE}/loyaltyClass`, loyaltyClass, token);
   return classId;
 }
@@ -83,7 +97,12 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
     where: { id: cardId },
     include: {
       customer: true,
-      program: { include: { business: true } },
+      program: {
+        include: {
+          business: true,
+          rewards: { where: { isActive: true }, orderBy: { pointsRequired: "asc" } },
+        },
+      },
     },
   });
 
@@ -92,7 +111,26 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
   const classId = `${ISSUER_ID}.business_${card.program.businessId}`;
   const objectId = `${ISSUER_ID}.card_${cardId}`;
 
-  const loyaltyObject = {
+  // Módulos de texto: progreso hacia la siguiente recompensa
+  const textModulesData: { header: string; body: string; id: string }[] = [];
+
+  const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
+  if (nextReward) {
+    const needed = nextReward.pointsRequired - card.currentPoints;
+    textModulesData.push({
+      header: "Próxima recompensa",
+      body: `Te faltan ${needed} puntos para: ${nextReward.name}`,
+      id: "next_reward",
+    });
+  } else if (card.program.rewards.length > 0) {
+    textModulesData.push({
+      header: "¡Tienes recompensas disponibles!",
+      body: "Muestra tu tarjeta al cajero para canjear.",
+      id: "rewards_ready",
+    });
+  }
+
+  const loyaltyObject: Record<string, unknown> = {
     id: objectId,
     classId,
     state: "ACTIVE",
@@ -108,6 +146,10 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
     accountId: card.id,
     accountName: card.customer.name,
   };
+
+  if (textModulesData.length > 0) {
+    loyaltyObject.textModulesData = textModulesData;
+  }
 
   await upsert(`${WALLET_API_BASE}/loyaltyObject`, loyaltyObject, token);
 
@@ -130,19 +172,55 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
   return `https://pay.google.com/gp/v/save/${jwtToken}`;
 }
 
+// #1 — Actualiza puntos y notifica al cliente en Google Wallet
 export async function updateCardPoints(cardId: string): Promise<void> {
-  const card = await prisma.loyaltyCard.findUnique({ where: { id: cardId } });
+  const card = await prisma.loyaltyCard.findUnique({
+    where: { id: cardId },
+    include: {
+      program: {
+        include: {
+          rewards: { where: { isActive: true }, orderBy: { pointsRequired: "asc" } },
+        },
+      },
+    },
+  });
   if (!card?.googlePassId) return;
 
   const token = await getToken();
   const objectId = `${ISSUER_ID}.card_${cardId}`;
 
+  // Recalcular textModulesData actualizado
+  const textModulesData: { header: string; body: string; id: string }[] = [];
+  const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
+  if (nextReward) {
+    const needed = nextReward.pointsRequired - card.currentPoints;
+    textModulesData.push({
+      header: "Próxima recompensa",
+      body: `Te faltan ${needed} puntos para: ${nextReward.name}`,
+      id: "next_reward",
+    });
+  } else if (card.program.rewards.length > 0) {
+    textModulesData.push({
+      header: "¡Tienes recompensas disponibles!",
+      body: "Muestra tu tarjeta al cajero para canjear.",
+      id: "rewards_ready",
+    });
+  }
+
+  const patch: Record<string, unknown> = {
+    loyaltyPoints: { balance: { int: card.currentPoints } },
+    // notifyPreference es transitorio: Google lo procesa y lo descarta, no queda guardado
+    notifyPreference: "notifyOnUpdate",
+  };
+
+  if (textModulesData.length > 0) {
+    patch.textModulesData = textModulesData;
+  }
+
   await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      loyaltyPoints: { balance: { int: card.currentPoints } },
-    }),
+    body: JSON.stringify(patch),
   });
 }
 
