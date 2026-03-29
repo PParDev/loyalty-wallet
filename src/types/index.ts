@@ -92,6 +92,12 @@ export interface AvailableReward {
   rewardType: string;
 }
 
+export interface BusinessLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface DashboardStats {
   totalCustomers: number;
   visitsToday: number;

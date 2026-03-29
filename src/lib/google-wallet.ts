@@ -74,18 +74,12 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     loyaltyClass.merchantLocations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
   }
 
-  // Botones interactivos en la tarjeta
-  const uris: { uri: string; description: string; id: string }[] = [];
-
-  if (business.phone) {
-    const digits = business.phone.replace(/\D/g, "");
-    // Si ya tiene código de país (52 para México) no lo duplicamos
-    const waPhone = digits.startsWith("52") ? digits : `52${digits}`;
-    uris.push({ uri: `https://wa.me/${waPhone}`, description: "Escribir por WhatsApp", id: "whatsapp" });
-  }
-
-  if (uris.length > 0) {
-    loyaltyClass.linksModuleData = { uris };
+  // Links personalizados configurados por el negocio
+  const savedLinks = ((business as unknown as { links: unknown }).links ?? []) as { id: string; label: string; url: string }[];
+  if (savedLinks.length > 0) {
+    loyaltyClass.linksModuleData = {
+      uris: savedLinks.map((l) => ({ uri: l.url, description: l.label, id: l.id })),
+    };
   }
 
   await upsert(`${WALLET_API_BASE}/loyaltyClass`, loyaltyClass, token);
@@ -111,20 +105,25 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
   const classId = `${ISSUER_ID}.business_${card.program.businessId}`;
   const objectId = `${ISSUER_ID}.card_${cardId}`;
 
-  // Módulos de texto: progreso hacia la siguiente recompensa
+  // Módulos de texto: barra de progreso visual hacia la siguiente recompensa
   const textModulesData: { header: string; body: string; id: string }[] = [];
 
   const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
   if (nextReward) {
     const needed = nextReward.pointsRequired - card.currentPoints;
+    const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
+    const total = nextReward.pointsRequired - prevThreshold;
+    const earned = card.currentPoints - prevThreshold;
+    const filledBlocks = Math.round((earned / total) * 10);
+    const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
     textModulesData.push({
-      header: "Próxima recompensa",
-      body: `Te faltan ${needed} puntos para: ${nextReward.name}`,
+      header: `Progreso: ${nextReward.name}`,
+      body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
       id: "next_reward",
     });
   } else if (card.program.rewards.length > 0) {
     textModulesData.push({
-      header: "¡Tienes recompensas disponibles!",
+      header: "🎉 ¡Tienes recompensas disponibles!",
       body: "Muestra tu tarjeta al cajero para canjear.",
       id: "rewards_ready",
     });
@@ -189,19 +188,24 @@ export async function updateCardPoints(cardId: string): Promise<void> {
   const token = await getToken();
   const objectId = `${ISSUER_ID}.card_${cardId}`;
 
-  // Recalcular textModulesData actualizado
+  // Recalcular barra de progreso actualizada
   const textModulesData: { header: string; body: string; id: string }[] = [];
   const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
   if (nextReward) {
     const needed = nextReward.pointsRequired - card.currentPoints;
+    const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
+    const total = nextReward.pointsRequired - prevThreshold;
+    const earned = card.currentPoints - prevThreshold;
+    const filledBlocks = Math.round((earned / total) * 10);
+    const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
     textModulesData.push({
-      header: "Próxima recompensa",
-      body: `Te faltan ${needed} puntos para: ${nextReward.name}`,
+      header: `Progreso: ${nextReward.name}`,
+      body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
       id: "next_reward",
     });
   } else if (card.program.rewards.length > 0) {
     textModulesData.push({
-      header: "¡Tienes recompensas disponibles!",
+      header: "🎉 ¡Tienes recompensas disponibles!",
       body: "Muestra tu tarjeta al cajero para canjear.",
       id: "rewards_ready",
     });

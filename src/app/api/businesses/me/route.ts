@@ -19,7 +19,14 @@ export async function GET() {
   return NextResponse.json<ApiResponse>({ success: true, data: business });
 }
 
+const linkSchema = z.object({
+  id: z.string(),
+  label: z.string().min(1).max(50),
+  url: z.string().url(),
+});
+
 const updateSchema = z.object({
+  // Datos del negocio
   name: z.string().min(2).optional(),
   description: z.string().optional(),
   phone: z.string().optional(),
@@ -29,8 +36,15 @@ const updateSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   geoRadiusMeters: z.number().int().min(50).max(5000).optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.string().url().optional().or(z.literal("")),
   category: z.string().optional(),
+  links: z.array(linkSchema).max(5).optional(),
+  // Datos del programa de lealtad
+  programName: z.string().min(2).optional(),
+  cardBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  cardTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  pointsPerVisit: z.number().int().min(1).optional(),
+  pointsPerCurrency: z.number().min(0).optional(),
 });
 
 export async function PUT(req: Request) {
@@ -42,10 +56,35 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const data = updateSchema.parse(body);
 
+    const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, links, ...businessData } = data;
+
+    // Normalizar logoUrl vacío → null
+    if ("logoUrl" in businessData && businessData.logoUrl === "") {
+      (businessData as Record<string, unknown>).logoUrl = null;
+    }
+
     const business = await prisma.business.update({
       where: { id: session.user.businessId },
-      data,
+      data: {
+        ...businessData,
+        ...(links !== undefined ? { links: links as object[] } : {}),
+      },
     });
+
+    // Actualizar programa si vienen campos del programa
+    const programUpdate: Record<string, unknown> = {};
+    if (programName) programUpdate.name = programName;
+    if (cardBgColor) programUpdate.cardBgColor = cardBgColor;
+    if (cardTextColor) programUpdate.cardTextColor = cardTextColor;
+    if (pointsPerVisit !== undefined) programUpdate.pointsPerVisit = pointsPerVisit;
+    if (pointsPerCurrency !== undefined) programUpdate.pointsPerCurrency = pointsPerCurrency;
+
+    if (Object.keys(programUpdate).length > 0) {
+      await prisma.loyaltyProgram.updateMany({
+        where: { businessId: session.user.businessId, isActive: true },
+        data: programUpdate,
+      });
+    }
 
     return NextResponse.json<ApiResponse>({ success: true, data: business });
   } catch (err) {
