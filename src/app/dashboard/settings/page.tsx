@@ -5,12 +5,11 @@ import type { BusinessLink } from "@/types";
 
 interface ProgramData {
   name: string;
-  programType: string;
+  earningMode: string;
   cardBgColor: string;
   cardTextColor: string;
   pointsPerVisit: number;
   pointsPerCurrency: number;
-  stampsRequired: number;
   pointsExpirationDays: number | null;
 }
 
@@ -51,19 +50,18 @@ export default function SettingsPage() {
     geoRadiusMeters: number;
     links: BusinessLink[];
     programName: string;
-    programType: "points" | "stamps";
+    earningMode: "visit" | "amount";
     cardBgColor: string;
     cardTextColor: string;
     pointsPerVisit: number;
     pointsPerCurrency: number;
-    stampsRequired: number;
     pointsExpirationDays: string; // string para el input, "" = desactivado
   }>({
     name: "", category: "", description: "", logoUrl: "", phone: "", email: "",
     address: "", city: "", latitude: "", longitude: "", geoRadiusMeters: 200,
-    links: [], programName: "", programType: "points",
+    links: [], programName: "", earningMode: "visit",
     cardBgColor: "#1a1a2e", cardTextColor: "#ffffff",
-    pointsPerVisit: 1, pointsPerCurrency: 0, stampsRequired: 10,
+    pointsPerVisit: 1, pointsPerCurrency: 0,
     pointsExpirationDays: "",
   });
 
@@ -94,12 +92,11 @@ export default function SettingsPage() {
             geoRadiusMeters: b.geoRadiusMeters,
             links: Array.isArray(b.links) ? b.links : [],
             programName: prog?.name ?? "",
-            programType: (prog?.programType as "points" | "stamps") ?? "points",
+            earningMode: (prog?.earningMode as "visit" | "amount") ?? "visit",
             cardBgColor: prog?.cardBgColor ?? "#1a1a2e",
             cardTextColor: prog?.cardTextColor ?? "#ffffff",
             pointsPerVisit: prog?.pointsPerVisit ?? 1,
             pointsPerCurrency: prog?.pointsPerCurrency ?? 0,
-            stampsRequired: prog?.stampsRequired ?? 10,
             pointsExpirationDays: prog?.pointsExpirationDays ? String(prog.pointsExpirationDays) : "",
           });
         }
@@ -271,57 +268,43 @@ export default function SettingsPage() {
             <input value={form.programName} onChange={(e) => setForm({ ...form, programName: e.target.value })} placeholder="Club de Lealtad" className={inputClass} />
           </div>
 
-          {/* Tipo de programa */}
+          {/* Modo de acumulación */}
           <div>
-            <label className={labelClass}>Tipo de programa</label>
+            <label className={labelClass}>¿Cómo acumulan puntos tus clientes?</label>
             <div className="flex rounded-lg border border-gray-200 overflow-hidden">
               <button
                 type="button"
-                onClick={() => setForm({ ...form, programType: "points" })}
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${form.programType === "points" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50 bg-white"}`}
+                onClick={() => setForm({ ...form, earningMode: "visit" })}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${form.earningMode === "visit" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50 bg-white"}`}
               >
-                Puntos acumulables
+                Por visita
               </button>
               <button
                 type="button"
-                onClick={() => setForm({ ...form, programType: "stamps" })}
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${form.programType === "stamps" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50 bg-white"}`}
+                onClick={() => setForm({ ...form, earningMode: "amount" })}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${form.earningMode === "amount" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50 bg-white"}`}
               >
-                Tarjeta de sellos
+                Por monto de compra
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-1.5">
-              {form.programType === "points"
-                ? "El cliente acumula puntos y los canjea por recompensas."
-                : "El cliente colecciona sellos. Al completar la tarjeta, gana una recompensa."}
+              {form.earningMode === "visit"
+                ? "El cliente gana puntos fijos por cada visita, sin importar cuánto compre."
+                : "El cliente gana puntos según el monto que gasta en cada visita."}
             </p>
           </div>
 
-          {form.programType === "points" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Puntos por visita</label>
-                <input type="number" min="1" value={form.pointsPerVisit} onChange={(e) => setForm({ ...form, pointsPerVisit: parseInt(e.target.value) })} className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>Puntos por cada $1 MXN gastado</label>
-                <input type="number" min="0" step="0.1" value={form.pointsPerCurrency} onChange={(e) => setForm({ ...form, pointsPerCurrency: parseFloat(e.target.value) })} placeholder="0 = desactivado" className={inputClass} />
-              </div>
-            </div>
-          )}
-
-          {form.programType === "stamps" && (
+          {form.earningMode === "visit" ? (
             <div>
-              <label className={labelClass}>Sellos para completar la tarjeta</label>
-              <input
-                type="number"
-                min="2"
-                max="100"
-                value={form.stampsRequired}
-                onChange={(e) => setForm({ ...form, stampsRequired: parseInt(e.target.value) })}
-                className={inputClass}
-              />
-              <p className="text-xs text-gray-400 mt-1">El cliente recibe 1 sello por visita. Al llegar a este número, puede canjear su recompensa.</p>
+              <label className={labelClass}>Puntos por visita</label>
+              <input type="number" min="1" value={form.pointsPerVisit} onChange={(e) => setForm({ ...form, pointsPerVisit: parseInt(e.target.value) })} className={inputClass} />
+              <p className="text-xs text-gray-400 mt-1">El cliente recibe estos puntos cada vez que el cajero registra su visita.</p>
+            </div>
+          ) : (
+            <div>
+              <label className={labelClass}>Puntos por cada $1 MXN gastado</label>
+              <input type="number" min="0.01" step="0.01" value={form.pointsPerCurrency} onChange={(e) => setForm({ ...form, pointsPerCurrency: parseFloat(e.target.value) })} placeholder="Ej: 0.5 = 1 pt por cada $2" className={inputClass} />
+              <p className="text-xs text-gray-400 mt-1">El cajero ingresa el monto de la compra y el sistema calcula los puntos automáticamente.</p>
             </div>
           )}
 
@@ -340,7 +323,7 @@ export default function SettingsPage() {
               <span className="text-sm text-gray-500 shrink-0">días</span>
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              Si el cliente no visita en este periodo, sus {form.programType === "stamps" ? "sellos" : "puntos"} se reinician. Vacío = no expiran nunca.
+              Si el cliente no visita en este periodo, sus puntos se reinician. Vacío = no expiran nunca.
             </p>
           </div>
 
@@ -396,26 +379,11 @@ export default function SettingsPage() {
                   <p className="text-base font-bold opacity-90">{form.name || "Tu negocio"}</p>
                   <p className="text-xs opacity-60 mt-0.5">{form.programName || "Programa de lealtad"}</p>
                 </div>
-                {form.programType === "points" ? (
-                  <div className="text-right">
-                    <p className="text-3xl font-bold">150</p>
-                    <p className="text-xs opacity-60">puntos</p>
-                  </div>
-                ) : (
-                  <div className="text-right">
-                    <p className="text-lg font-bold">7/{form.stampsRequired}</p>
-                    <p className="text-xs opacity-60">sellos</p>
-                  </div>
-                )}
-              </div>
-              {form.programType === "stamps" && (
-                <div className="flex flex-wrap gap-1 justify-center mb-3">
-                  {Array.from({ length: Math.min(form.stampsRequired, 12) }).map((_, i) => (
-                    <span key={i} className="text-lg">{i < 7 ? "✅" : "⬜"}</span>
-                  ))}
-                  {form.stampsRequired > 12 && <span className="text-xs opacity-60 self-center">+{form.stampsRequired - 12} más</span>}
+                <div className="text-right">
+                  <p className="text-3xl font-bold">150</p>
+                  <p className="text-xs opacity-60">puntos</p>
                 </div>
-              )}
+              </div>
               <div className="flex justify-center bg-white bg-opacity-20 rounded-xl p-3 mb-3">
                 <div className="w-20 h-20 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
                   <span className="text-xs opacity-60">QR</span>

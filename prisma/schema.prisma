@@ -65,10 +65,9 @@ model LoyaltyProgram {
   id                   String   @id @default(uuid())
   businessId           String   @map("business_id")
   name                 String
-  programType          String   @default("points") @map("program_type") // "points" | "stamps"
+  earningMode          String   @default("visit") @map("earning_mode") // "visit" | "amount"
   pointsPerVisit       Int      @default(1) @map("points_per_visit")
-  pointsPerCurrency    Int      @default(0) @map("points_per_currency")
-  stampsRequired       Int      @default(10) @map("stamps_required")
+  pointsPerCurrency    Float    @default(0) @map("points_per_currency")
   pointsExpirationDays Int?     @map("points_expiration_days") // null = no expira
   cardBgColor          String   @default("#1a1a2e") @map("card_bg_color")
   cardTextColor        String   @default("#ffffff") @map("card_text_color")

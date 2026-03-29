@@ -70,21 +70,16 @@ export async function POST(
     }
 
     // 2. Calcular puntos a sumar
-    const isStamps = card.program.programType === "stamps";
-    let pointsToAdd: number;
-
-    if (isStamps) {
-      pointsToAdd = 1; // siempre 1 sello por visita
+    let base: number;
+    if (card.program.earningMode === "amount" && data.amountSpent && card.program.pointsPerCurrency > 0) {
+      base = data.amountSpent * card.program.pointsPerCurrency;
     } else {
-      let base = data.points ?? card.program.pointsPerVisit;
-      if (data.amountSpent && card.program.pointsPerCurrency > 0) {
-        base = Math.floor(data.amountSpent * card.program.pointsPerCurrency);
-      }
-      // Multiplicador de tier (basado en totalPointsEarned histórico)
-      const activeTier = card.program.tiers.find((t) => t.minPoints <= card.totalPointsEarned);
-      const multiplier = activeTier?.multiplier ?? 1.0;
-      pointsToAdd = Math.round(base * multiplier);
+      base = data.points ?? card.program.pointsPerVisit;
     }
+    // Multiplicador de tier (basado en totalPointsEarned histórico)
+    const activeTier = card.program.tiers.find((t) => t.minPoints <= card.totalPointsEarned);
+    const multiplier = activeTier?.multiplier ?? 1.0;
+    const pointsToAdd = Math.round(base * multiplier);
 
     // 3. Nueva fecha de expiración (se renueva con cada actividad)
     const newExpiresAt = card.program.pointsExpirationDays
@@ -109,7 +104,7 @@ export async function POST(
           type: "earn",
           points: pointsToAdd,
           amountSpent: data.amountSpent,
-          description: data.description ?? (isStamps ? "Sello registrado" : `+${pointsToAdd} puntos`),
+          description: data.description ?? `+${pointsToAdd} puntos`,
           createdById: session.user.id,
         },
       }),
@@ -122,8 +117,6 @@ export async function POST(
       data: {
         newPoints: updatedCard.currentPoints,
         pointsAdded: pointsToAdd,
-        isStamps,
-        stampsRequired: isStamps ? card.program.stampsRequired : undefined,
         pointsExpired,
       },
     });

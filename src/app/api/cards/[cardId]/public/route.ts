@@ -42,8 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ cardId:
       qrCodeData: card.qrCodeData,
       program: {
         name: card.program.name,
-        programType: card.program.programType,
-        stampsRequired: card.program.stampsRequired,
+        earningMode: card.program.earningMode,
         cardBgColor: card.program.cardBgColor,
         cardTextColor: card.program.cardTextColor,
         pointsPerVisit: card.program.pointsPerVisit,

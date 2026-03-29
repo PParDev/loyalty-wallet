@@ -18,10 +18,9 @@ function buildScanResult(card: {
   customer: { id: string; name: string; phone: string };
   program: {
     name: string;
-    programType: string;
+    earningMode: string;
     pointsPerVisit: number;
     pointsPerCurrency: number;
-    stampsRequired: number;
     pointsExpirationDays: number | null;
     rewards: { id: string; name: string; description: string | null; pointsRequired: number; rewardType: string }[];
     tiers: { id: string; name: string; minPoints: number; color: string; benefits: string | null; multiplier: number }[];
@@ -49,10 +48,9 @@ function buildScanResult(card: {
     })),
     program: {
       name: card.program.name,
-      programType: card.program.programType,
+      earningMode: card.program.earningMode,
       pointsPerVisit: card.program.pointsPerVisit,
       pointsPerCurrency: card.program.pointsPerCurrency,
-      stampsRequired: card.program.stampsRequired,
       pointsExpirationDays: card.program.pointsExpirationDays,
     },
     tier: activeTier,

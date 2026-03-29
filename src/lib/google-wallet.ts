@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 // Workaround: el TS server puede tener caché del cliente anterior a prisma generate.
 // Estos tipos reflejan los campos reales en la BD.
 type TierRow = { id: string; name: string; minPoints: number; benefits: string | null; multiplier: number };
-type ProgramExtras = { programType: string; stampsRequired: number };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = prisma as unknown as { tier: { findMany: (args: object) => Promise<TierRow[]> } } & typeof prisma;
 
@@ -114,10 +113,8 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
     orderBy: { minPoints: "desc" },
   });
 
-  const prog = card.program as typeof card.program & ProgramExtras;
   const classId = `${ISSUER_ID}.business_${card.program.businessId}`;
   const objectId = `${ISSUER_ID}.card_${cardId}`;
-  const isStamps = prog.programType === "stamps";
 
   const textModulesData: { header: string; body: string; id: string }[] = [];
 
@@ -131,40 +128,26 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
     textModulesData.push({ header: `Nivel: ${activeTier.name}`, body, id: "tier" });
   }
 
-  if (isStamps) {
-    // Módulo de sellos
-    const stampsRequired = prog.stampsRequired;
-    const current = card.currentPoints;
-    const filled = Math.min(current, stampsRequired);
-    const bar = "✅".repeat(filled) + "⬜".repeat(stampsRequired - filled);
-    const nextReward = card.program.rewards.find((r) => r.pointsRequired <= stampsRequired);
+  // Módulo de barra de progreso hacia la siguiente recompensa
+  const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
+  if (nextReward) {
+    const needed = nextReward.pointsRequired - card.currentPoints;
+    const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
+    const total = nextReward.pointsRequired - prevThreshold;
+    const earned = card.currentPoints - prevThreshold;
+    const filledBlocks = Math.round((earned / total) * 10);
+    const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
     textModulesData.push({
-      header: `Sellos: ${current}/${stampsRequired}`,
-      body: `${bar}${nextReward ? ` — Recompensa: ${nextReward.name}` : ""}`,
-      id: "stamps",
+      header: `Progreso: ${nextReward.name}`,
+      body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
+      id: "next_reward",
     });
-  } else {
-    // Módulo de barra de progreso hacia la siguiente recompensa
-    const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
-    if (nextReward) {
-      const needed = nextReward.pointsRequired - card.currentPoints;
-      const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
-      const total = nextReward.pointsRequired - prevThreshold;
-      const earned = card.currentPoints - prevThreshold;
-      const filledBlocks = Math.round((earned / total) * 10);
-      const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
-      textModulesData.push({
-        header: `Progreso: ${nextReward.name}`,
-        body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
-        id: "next_reward",
-      });
-    } else if (card.program.rewards.length > 0) {
-      textModulesData.push({
-        header: "🎉 ¡Tienes recompensas disponibles!",
-        body: "Muestra tu tarjeta al cajero para canjear.",
-        id: "rewards_ready",
-      });
-    }
+  } else if (card.program.rewards.length > 0) {
+    textModulesData.push({
+      header: "🎉 ¡Tienes recompensas disponibles!",
+      body: "Muestra tu tarjeta al cajero para canjear.",
+      id: "rewards_ready",
+    });
   }
 
   const loyaltyObject: Record<string, unknown> = {
@@ -228,10 +211,8 @@ export async function updateCardPoints(cardId: string): Promise<void> {
     orderBy: { minPoints: "desc" },
   });
 
-  const prog = card.program as typeof card.program & ProgramExtras;
   const token = await getToken();
   const objectId = `${ISSUER_ID}.card_${cardId}`;
-  const isStamps = prog.programType === "stamps";
 
   const textModulesData: { header: string; body: string; id: string }[] = [];
 
@@ -245,38 +226,25 @@ export async function updateCardPoints(cardId: string): Promise<void> {
     textModulesData.push({ header: `Nivel: ${activeTier.name}`, body, id: "tier" });
   }
 
-  if (isStamps) {
-    const stampsRequired = prog.stampsRequired;
-    const current = card.currentPoints;
-    const filled = Math.min(current, stampsRequired);
-    const bar = "✅".repeat(filled) + "⬜".repeat(stampsRequired - filled);
-    const nextReward = card.program.rewards.find((r) => r.pointsRequired <= stampsRequired);
+  const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
+  if (nextReward) {
+    const needed = nextReward.pointsRequired - card.currentPoints;
+    const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
+    const total = nextReward.pointsRequired - prevThreshold;
+    const earned = card.currentPoints - prevThreshold;
+    const filledBlocks = Math.round((earned / total) * 10);
+    const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
     textModulesData.push({
-      header: `Sellos: ${current}/${stampsRequired}`,
-      body: `${bar}${nextReward ? ` — Recompensa: ${nextReward.name}` : ""}`,
-      id: "stamps",
+      header: `Progreso: ${nextReward.name}`,
+      body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
+      id: "next_reward",
     });
-  } else {
-    const nextReward = card.program.rewards.find((r) => r.pointsRequired > card.currentPoints);
-    if (nextReward) {
-      const needed = nextReward.pointsRequired - card.currentPoints;
-      const prevThreshold = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints).at(-1)?.pointsRequired ?? 0;
-      const total = nextReward.pointsRequired - prevThreshold;
-      const earned = card.currentPoints - prevThreshold;
-      const filledBlocks = Math.round((earned / total) * 10);
-      const bar = "█".repeat(filledBlocks) + "░".repeat(10 - filledBlocks);
-      textModulesData.push({
-        header: `Progreso: ${nextReward.name}`,
-        body: `${bar}  ${card.currentPoints}/${nextReward.pointsRequired} pts — faltan ${needed}`,
-        id: "next_reward",
-      });
-    } else if (card.program.rewards.length > 0) {
-      textModulesData.push({
-        header: "🎉 ¡Tienes recompensas disponibles!",
-        body: "Muestra tu tarjeta al cajero para canjear.",
-        id: "rewards_ready",
-      });
-    }
+  } else if (card.program.rewards.length > 0) {
+    textModulesData.push({
+      header: "🎉 ¡Tienes recompensas disponibles!",
+      body: "Muestra tu tarjeta al cajero para canjear.",
+      id: "rewards_ready",
+    });
   }
 
   const patch: Record<string, unknown> = {

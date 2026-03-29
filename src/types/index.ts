@@ -90,10 +90,9 @@ export interface CardScanResult {
   availableRewards: AvailableReward[];
   program: {
     name: string;
-    programType: string;
+    earningMode: string;
     pointsPerVisit: number;
     pointsPerCurrency: number;
-    stampsRequired: number;
     pointsExpirationDays: number | null;
   };
   tier: TierInfo | null;

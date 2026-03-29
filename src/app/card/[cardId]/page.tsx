@@ -21,8 +21,7 @@ interface CardData {
   tier: TierInfo | null;
   program: {
     name: string;
-    programType: string;
-    stampsRequired: number;
+    earningMode: string;
     cardBgColor: string;
     cardTextColor: string;
     pointsPerVisit: number;
@@ -43,16 +42,6 @@ interface Transaction {
   createdAt: string;
 }
 
-function StampGrid({ current, total, fg }: { current: number; total: number; fg: string }) {
-  return (
-    <div className="flex flex-wrap gap-1 justify-center my-2">
-      {Array.from({ length: Math.min(total, 16) }).map((_, i) => (
-        <span key={i} className="text-xl leading-none">{i < current ? "✅" : "⬜"}</span>
-      ))}
-      {total > 16 && <span className="text-xs self-center" style={{ color: fg, opacity: 0.6 }}>+{total - 16} más</span>}
-    </div>
-  );
-}
 
 export default function CardPage({ params }: { params: Promise<{ cardId: string }> }) {
   const { cardId } = use(params);
@@ -166,7 +155,6 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
 
   const bg = card.program.cardBgColor;
   const fg = card.program.cardTextColor;
-  const isStamps = card.program.programType === "stamps";
 
   // Expiración
   const expirationText = (() => {
@@ -174,7 +162,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
     const daysLeft = Math.ceil((new Date(card.pointsExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (daysLeft <= 0) return null; // ya vencidos, se reinician en la siguiente visita
     const dateStr = new Date(card.pointsExpiresAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-    if (daysLeft <= 7) return { text: `⚠️ Tus ${isStamps ? "sellos" : "puntos"} vencen el ${dateStr} (${daysLeft} días)`, urgent: true };
+    if (daysLeft <= 7) return { text: `⚠️ Tus puntos vencen el ${dateStr} (${daysLeft} días)`, urgent: true };
     return { text: `Válidos hasta el ${dateStr}`, urgent: false };
   })();
 
@@ -196,17 +184,8 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
             <p className="text-sm opacity-70 mt-0.5">{card.program.name}</p>
           </div>
           <div className="text-right">
-            {isStamps ? (
-              <>
-                <p className="text-4xl font-bold">{card.currentPoints}</p>
-                <p className="text-xs opacity-60">/ {card.program.stampsRequired} sellos</p>
-              </>
-            ) : (
-              <>
-                <p className="text-4xl font-bold">{card.currentPoints}</p>
-                <p className="text-xs opacity-60">puntos</p>
-              </>
-            )}
+            <p className="text-4xl font-bold">{card.currentPoints}</p>
+            <p className="text-xs opacity-60">puntos</p>
           </div>
         </div>
 
@@ -224,11 +203,6 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
               <p className="text-xs mt-1 opacity-70">{card.tier.benefits}</p>
             )}
           </div>
-        )}
-
-        {/* Grid de sellos */}
-        {isStamps && (
-          <StampGrid current={card.currentPoints} total={card.program.stampsRequired} fg={fg} />
         )}
 
         {/* QR */}
@@ -315,7 +289,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {tx.description ?? (tx.type === "earn" ? (isStamps ? "Sello" : "Puntos ganados") : tx.type === "redeem" ? "Canje" : "Ajuste")}
+                        {tx.description ?? (tx.type === "earn" ? "Puntos ganados" : tx.type === "redeem" ? "Canje" : "Ajuste")}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDate(tx.createdAt)} · {formatTime(tx.createdAt)}
@@ -323,7 +297,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
                       </p>
                     </div>
                     <span className={`text-sm font-bold shrink-0 ${tx.points > 0 ? "text-green-600" : "text-red-500"}`}>
-                      {tx.points > 0 ? "+" : ""}{tx.points} {isStamps ? "sello" : "pts"}
+                      {tx.points > 0 ? "+" : ""}{tx.points} pts
                     </span>
                   </li>
                 ))}

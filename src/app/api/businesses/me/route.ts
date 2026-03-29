@@ -45,8 +45,7 @@ const updateSchema = z.object({
   cardTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   pointsPerVisit: z.number().int().min(1).optional(),
   pointsPerCurrency: z.number().min(0).optional(),
-  programType: z.enum(["points", "stamps"]).optional(),
-  stampsRequired: z.number().int().min(2).max(100).optional(),
+  earningMode: z.enum(["visit", "amount"]).optional(),
   pointsExpirationDays: z.number().int().min(1).nullable().optional(), // null = desactivar expiración
 });
 
@@ -59,7 +58,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const data = updateSchema.parse(body);
 
-    const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, programType, stampsRequired, pointsExpirationDays, links, ...businessData } = data;
+    const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, earningMode, pointsExpirationDays, links, ...businessData } = data;
 
     // Normalizar logoUrl vacío → null
     if ("logoUrl" in businessData && businessData.logoUrl === "") {
@@ -81,8 +80,7 @@ export async function PUT(req: Request) {
     if (cardTextColor) programUpdate.cardTextColor = cardTextColor;
     if (pointsPerVisit !== undefined) programUpdate.pointsPerVisit = pointsPerVisit;
     if (pointsPerCurrency !== undefined) programUpdate.pointsPerCurrency = pointsPerCurrency;
-    if (programType !== undefined) programUpdate.programType = programType;
-    if (stampsRequired !== undefined) programUpdate.stampsRequired = stampsRequired;
+    if (earningMode !== undefined) programUpdate.earningMode = earningMode;
     if (pointsExpirationDays !== undefined) programUpdate.pointsExpirationDays = pointsExpirationDays;
 
     if (Object.keys(programUpdate).length > 0) {
