@@ -26,7 +26,14 @@ export async function POST(
 
     const card = await prisma.loyaltyCard.findUnique({
       where: { id: cardId },
-      include: { program: { include: { business: true } } },
+      include: {
+        program: {
+          include: {
+            business: true,
+            tiers: { orderBy: { minPoints: "desc" } },
+          },
+        },
+      },
     });
 
     if (!card) return NextResponse.json<ApiResponse>({ success: false, error: "Tarjeta no encontrada" }, { status: 404 });
@@ -37,12 +44,54 @@ export async function POST(
       return NextResponse.json<ApiResponse>({ success: false, error: "Negocio suspendido" }, { status: 403 });
     }
 
-    // Calcular puntos a sumar
-    let pointsToAdd = data.points ?? card.program.pointsPerVisit;
-    if (data.amountSpent && card.program.pointsPerCurrency > 0) {
-      pointsToAdd = Math.floor(data.amountSpent * card.program.pointsPerCurrency);
+    const now = new Date();
+    let pointsExpired = false;
+
+    // 1. Expirar puntos si aplica
+    if (
+      card.program.pointsExpirationDays &&
+      card.pointsExpiresAt &&
+      card.pointsExpiresAt < now &&
+      card.currentPoints > 0
+    ) {
+      await prisma.$transaction([
+        prisma.loyaltyCard.update({ where: { id: cardId }, data: { currentPoints: 0 } }),
+        prisma.transaction.create({
+          data: {
+            cardId,
+            type: "adjust",
+            points: -card.currentPoints,
+            description: "Puntos vencidos por inactividad",
+            createdById: session.user.id,
+          },
+        }),
+      ]);
+      pointsExpired = true;
     }
 
+    // 2. Calcular puntos a sumar
+    const isStamps = card.program.programType === "stamps";
+    let pointsToAdd: number;
+
+    if (isStamps) {
+      pointsToAdd = 1; // siempre 1 sello por visita
+    } else {
+      let base = data.points ?? card.program.pointsPerVisit;
+      if (data.amountSpent && card.program.pointsPerCurrency > 0) {
+        base = Math.floor(data.amountSpent * card.program.pointsPerCurrency);
+      }
+      // Multiplicador de tier (basado en totalPointsEarned histórico)
+      const activeTier = card.program.tiers.find((t) => t.minPoints <= card.totalPointsEarned);
+      const multiplier = activeTier?.multiplier ?? 1.0;
+      pointsToAdd = Math.round(base * multiplier);
+    }
+
+    // 3. Nueva fecha de expiración (se renueva con cada actividad)
+    const newExpiresAt = card.program.pointsExpirationDays
+      ? new Date(now.getTime() + card.program.pointsExpirationDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    // 4. Actualizar tarjeta + crear transacción
     const [updatedCard] = await prisma.$transaction([
       prisma.loyaltyCard.update({
         where: { id: cardId },
@@ -50,7 +99,8 @@ export async function POST(
           currentPoints: { increment: pointsToAdd },
           totalPointsEarned: { increment: pointsToAdd },
           totalVisits: { increment: 1 },
-          lastVisit: new Date(),
+          lastVisit: now,
+          pointsExpiresAt: newExpiresAt,
         },
       }),
       prisma.transaction.create({
@@ -59,18 +109,23 @@ export async function POST(
           type: "earn",
           points: pointsToAdd,
           amountSpent: data.amountSpent,
-          description: data.description ?? `+${pointsToAdd} puntos`,
+          description: data.description ?? (isStamps ? "Sello registrado" : `+${pointsToAdd} puntos`),
           createdById: session.user.id,
         },
       }),
     ]);
 
-    // Actualizar wallet en background (no bloquear respuesta)
     void updateWalletInBackground(cardId);
 
     return NextResponse.json<ApiResponse>({
       success: true,
-      data: { newPoints: updatedCard.currentPoints, pointsAdded: pointsToAdd },
+      data: {
+        newPoints: updatedCard.currentPoints,
+        pointsAdded: pointsToAdd,
+        isStamps,
+        stampsRequired: isStamps ? card.program.stampsRequired : undefined,
+        pointsExpired,
+      },
     });
   } catch (err) {
     if (err instanceof z.ZodError) {

@@ -8,6 +8,28 @@ const QrScanner = dynamic(() => import("@/components/scan/QrScanner"), { ssr: fa
 
 type ScanState = "scanning" | "result" | "adding_points" | "redeeming";
 
+function StampGrid({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {Array.from({ length: total }).map((_, i) => (
+        <span key={i} className="text-xl leading-none">{i < current ? "✅" : "⬜"}</span>
+      ))}
+    </div>
+  );
+}
+
+function TierBadge({ tier }: { tier: NonNullable<CardScanResult["tier"]> }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-gray-900"
+      style={{ backgroundColor: tier.color }}
+    >
+      ★ {tier.name}
+      {tier.multiplier > 1 && <span className="opacity-70">× {tier.multiplier}</span>}
+    </span>
+  );
+}
+
 export default function ScanPage() {
   const [state, setState] = useState<ScanState>("scanning");
   const [scanResult, setScanResult] = useState<CardScanResult | null>(null);
@@ -53,8 +75,9 @@ export default function ScanPage() {
 
   const handleAddPoints = async () => {
     if (!scanResult) return;
-    const points = pointsInput ? parseInt(pointsInput) : undefined;
-    const amountSpent = amountInput ? parseFloat(amountInput) : undefined;
+    const isStamps = scanResult.program.programType === "stamps";
+    const points = (!isStamps && pointsInput) ? parseInt(pointsInput) : undefined;
+    const amountSpent = (!isStamps && amountInput) ? parseFloat(amountInput) : undefined;
 
     const res = await fetch(`/api/cards/${scanResult.cardId}/points`, {
       method: "POST",
@@ -63,7 +86,11 @@ export default function ScanPage() {
     }).then((r) => r.json());
 
     if (res.success) {
-      setFeedback(`+${res.data.pointsAdded} puntos sumados. Total: ${res.data.newPoints} pts`);
+      const label = isStamps ? "sello" : "puntos";
+      const added = isStamps ? "1 sello" : `+${res.data.pointsAdded} puntos`;
+      let feedbackMsg = `${added} sumado. Total: ${res.data.newPoints} ${label}`;
+      if (res.data.pointsExpired) feedbackMsg = `⚠️ Puntos vencidos reiniciados. ${feedbackMsg}`;
+      setFeedback(feedbackMsg);
       setScanResult((prev) => prev ? { ...prev, currentPoints: res.data.newPoints } : prev);
       setState("result");
       setPointsInput("");
@@ -108,6 +135,17 @@ export default function ScanPage() {
     setPhoneInput("");
   };
 
+  // Aviso de expiración próxima (menos de 7 días)
+  const expirationWarning = (() => {
+    if (!scanResult?.pointsExpiresAt) return null;
+    const daysLeft = Math.ceil((new Date(scanResult.pointsExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) return { level: "danger", text: "¡Los puntos de este cliente están vencidos! Se reiniciarán al dar el próximo sello/punto." };
+    if (daysLeft <= 7) return { level: "warning", text: `Los puntos vencen en ${daysLeft} día${daysLeft === 1 ? "" : "s"}.` };
+    return null;
+  })();
+
+  const isStamps = scanResult?.program.programType === "stamps";
+
   return (
     <div className="p-4 md:p-8 max-w-lg mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Escanear QR</h2>
@@ -126,7 +164,6 @@ export default function ScanPage() {
 
       {state === "scanning" && (
         <div className="space-y-4">
-          {/* Tabs */}
           <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white">
             {(["camera", "phone", "manual"] as const).map((mode) => (
               <button
@@ -150,9 +187,7 @@ export default function ScanPage() {
 
           {scanMode === "phone" && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <p className="text-sm text-gray-500 mb-4">
-                Busca al cliente por su número de teléfono
-              </p>
+              <p className="text-sm text-gray-500 mb-4">Busca al cliente por su número de teléfono</p>
               <form onSubmit={handlePhoneSearch} className="space-y-3">
                 <input
                   type="tel"
@@ -202,28 +237,47 @@ export default function ScanPage() {
 
       {(state === "result" || state === "adding_points" || state === "redeeming") && scanResult && (
         <div className="bg-white rounded-xl border border-gray-200">
+          {/* Aviso de expiración */}
+          {expirationWarning && (
+            <div className={`px-4 py-2.5 text-xs font-medium ${expirationWarning.level === "danger" ? "bg-red-50 text-red-700 border-b border-red-100" : "bg-amber-50 text-amber-700 border-b border-amber-100"}`}>
+              {expirationWarning.text}
+            </div>
+          )}
+
           {/* Info del cliente */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900 text-lg">{scanResult.customer.name}</h3>
                 <p className="text-sm text-gray-500">{scanResult.customer.phone}</p>
+                {scanResult.tier && (
+                  <div className="mt-1.5">
+                    <TierBadge tier={scanResult.tier} />
+                  </div>
+                )}
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold text-indigo-600">{scanResult.currentPoints}</p>
-                <p className="text-xs text-gray-500">puntos</p>
+                {isStamps ? (
+                  <>
+                    <p className="text-3xl font-bold text-indigo-600">{scanResult.currentPoints}</p>
+                    <p className="text-xs text-gray-500">/ {scanResult.program.stampsRequired} sellos</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-3xl font-bold text-indigo-600">{scanResult.currentPoints}</p>
+                    <p className="text-xs text-gray-500">puntos</p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              {scanResult.totalVisits} visitas totales
-            </div>
+            {/* Grid de sellos */}
+            {isStamps && (
+              <StampGrid current={scanResult.currentPoints} total={scanResult.program.stampsRequired} />
+            )}
 
-            {/* Barra de progreso hacia la siguiente recompensa */}
-            {(() => {
+            {/* Barra de progreso (solo puntos) */}
+            {!isStamps && (() => {
               const allRewards = [...scanResult.availableRewards].sort((a, b) => a.pointsRequired - b.pointsRequired);
               const nextReward = allRewards.find((r) => r.pointsRequired > scanResult.currentPoints);
               if (!nextReward) return null;
@@ -232,18 +286,22 @@ export default function ScanPage() {
               return (
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>Próxima recompensa: <span className="font-medium text-gray-700">{nextReward.name}</span></span>
+                    <span>Próxima: <span className="font-medium text-gray-700">{nextReward.name}</span></span>
                     <span>{scanResult.currentPoints}/{nextReward.pointsRequired} pts</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="bg-indigo-500 h-2 rounded-full transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
+                    <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
               );
             })()}
+
+            <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              {scanResult.totalVisits} visitas totales
+            </div>
 
             {scanResult.availableRewards.length > 0 && (
               <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
@@ -261,7 +319,7 @@ export default function ScanPage() {
                 onClick={() => setState("adding_points")}
                 className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
               >
-                + Sumar puntos
+                {isStamps ? "✅ Dar sello" : "+ Sumar puntos"}
               </button>
               {scanResult.availableRewards.length > 0 && (
                 <button
@@ -279,31 +337,52 @@ export default function ScanPage() {
 
           {state === "adding_points" && (
             <div className="p-4 space-y-3">
-              <h4 className="font-medium text-gray-900">Sumar puntos</h4>
-              {scanResult.program.pointsPerCurrency > 0 && (
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Monto de compra ($MXN)</label>
-                  <input
-                    type="number"
-                    value={amountInput}
-                    onChange={(e) => setAmountInput(e.target.value)}
-                    placeholder="Ej: 150.00"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+              {isStamps ? (
+                <>
+                  <h4 className="font-medium text-gray-900">Dar sello</h4>
+                  <p className="text-sm text-gray-500">
+                    Se dará 1 sello al cliente. Llevará <strong>{scanResult.currentPoints + 1}</strong> de <strong>{scanResult.program.stampsRequired}</strong>.
+                  </p>
+                  {scanResult.currentPoints + 1 >= scanResult.program.stampsRequired && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 font-medium">
+                      🎉 ¡Con este sello el cliente completa su tarjeta!
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <h4 className="font-medium text-gray-900">Sumar puntos</h4>
+                  {scanResult.program.pointsPerCurrency > 0 && (
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Monto de compra ($MXN)</label>
+                      <input
+                        type="number"
+                        value={amountInput}
+                        onChange={(e) => setAmountInput(e.target.value)}
+                        placeholder="Ej: 150.00"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      Puntos a sumar (default: {scanResult.program.pointsPerVisit})
+                      {scanResult.tier && scanResult.tier.multiplier > 1 && (
+                        <span className="ml-1 font-medium" style={{ color: scanResult.tier.color }}>
+                          × {scanResult.tier.multiplier} ({scanResult.tier.name})
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      value={pointsInput}
+                      onChange={(e) => setPointsInput(e.target.value)}
+                      placeholder={String(scanResult.program.pointsPerVisit)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </>
               )}
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">
-                  Puntos a sumar (default: {scanResult.program.pointsPerVisit})
-                </label>
-                <input
-                  type="number"
-                  value={pointsInput}
-                  onChange={(e) => setPointsInput(e.target.value)}
-                  placeholder={String(scanResult.program.pointsPerVisit)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
               <button onClick={handleAddPoints} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700">
                 Confirmar
               </button>
@@ -324,7 +403,7 @@ export default function ScanPage() {
                 >
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-900">{r.name}</span>
-                    <span className="text-sm text-amber-600 font-semibold">{r.pointsRequired} pts</span>
+                    <span className="text-sm text-amber-600 font-semibold">{r.pointsRequired} {isStamps ? "sellos" : "pts"}</span>
                   </div>
                   {r.description && <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>}
                 </button>

@@ -66,6 +66,15 @@ export interface BusinessPublicInfo {
   } | null;
 }
 
+export interface TierInfo {
+  id: string;
+  name: string;
+  minPoints: number;
+  color: string;
+  benefits: string | null;
+  multiplier: number;
+}
+
 export interface CardScanResult {
   cardId: string;
   customer: {
@@ -74,14 +83,20 @@ export interface CardScanResult {
     phone: string;
   };
   currentPoints: number;
+  totalPointsEarned: number;
   totalVisits: number;
   lastVisit: Date | null;
+  pointsExpiresAt: Date | null;
   availableRewards: AvailableReward[];
   program: {
     name: string;
+    programType: string;
     pointsPerVisit: number;
     pointsPerCurrency: number;
+    stampsRequired: number;
+    pointsExpirationDays: number | null;
   };
+  tier: TierInfo | null;
 }
 
 export interface AvailableReward {

@@ -2,17 +2,31 @@
 
 import { useEffect, useState, use } from "react";
 
+interface TierInfo {
+  id: string;
+  name: string;
+  color: string;
+  benefits: string | null;
+  multiplier: number;
+}
+
 interface CardData {
   cardId: string;
   customerName: string;
   currentPoints: number;
+  totalPointsEarned: number;
   totalVisits: number;
+  pointsExpiresAt: string | null;
   qrCodeData: string;
+  tier: TierInfo | null;
   program: {
     name: string;
+    programType: string;
+    stampsRequired: number;
     cardBgColor: string;
     cardTextColor: string;
     pointsPerVisit: number;
+    pointsExpirationDays: number | null;
   };
   business: {
     name: string;
@@ -27,6 +41,17 @@ interface Transaction {
   amountSpent: string | null;
   description: string | null;
   createdAt: string;
+}
+
+function StampGrid({ current, total, fg }: { current: number; total: number; fg: string }) {
+  return (
+    <div className="flex flex-wrap gap-1 justify-center my-2">
+      {Array.from({ length: Math.min(total, 16) }).map((_, i) => (
+        <span key={i} className="text-xl leading-none">{i < current ? "✅" : "⬜"}</span>
+      ))}
+      {total > 16 && <span className="text-xs self-center" style={{ color: fg, opacity: 0.6 }}>+{total - 16} más</span>}
+    </div>
+  );
 }
 
 export default function CardPage({ params }: { params: Promise<{ cardId: string }> }) {
@@ -55,7 +80,6 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
       });
   }, [cardId]);
 
-  // Generar QR code en el cliente
   useEffect(() => {
     if (!card) return;
     import("qrcode").then((QRCode) => {
@@ -142,6 +166,17 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
 
   const bg = card.program.cardBgColor;
   const fg = card.program.cardTextColor;
+  const isStamps = card.program.programType === "stamps";
+
+  // Expiración
+  const expirationText = (() => {
+    if (!card.pointsExpiresAt) return null;
+    const daysLeft = Math.ceil((new Date(card.pointsExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) return null; // ya vencidos, se reinician en la siguiente visita
+    const dateStr = new Date(card.pointsExpiresAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+    if (daysLeft <= 7) return { text: `⚠️ Tus ${isStamps ? "sellos" : "puntos"} vencen el ${dateStr} (${daysLeft} días)`, urgent: true };
+    return { text: `Válidos hasta el ${dateStr}`, urgent: false };
+  })();
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center px-4 py-10">
@@ -150,7 +185,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
         className="w-full max-w-sm rounded-3xl p-6 shadow-2xl mb-6"
         style={{ backgroundColor: bg, color: fg }}
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             {card.business.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -161,10 +196,40 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
             <p className="text-sm opacity-70 mt-0.5">{card.program.name}</p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold">{card.currentPoints}</p>
-            <p className="text-xs opacity-60">puntos</p>
+            {isStamps ? (
+              <>
+                <p className="text-4xl font-bold">{card.currentPoints}</p>
+                <p className="text-xs opacity-60">/ {card.program.stampsRequired} sellos</p>
+              </>
+            ) : (
+              <>
+                <p className="text-4xl font-bold">{card.currentPoints}</p>
+                <p className="text-xs opacity-60">puntos</p>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Badge de nivel */}
+        {card.tier && (
+          <div className="mb-3">
+            <span
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-gray-900"
+              style={{ backgroundColor: card.tier.color }}
+            >
+              ★ {card.tier.name}
+              {card.tier.multiplier > 1 && <span className="opacity-70">× {card.tier.multiplier}</span>}
+            </span>
+            {card.tier.benefits && (
+              <p className="text-xs mt-1 opacity-70">{card.tier.benefits}</p>
+            )}
+          </div>
+        )}
+
+        {/* Grid de sellos */}
+        {isStamps && (
+          <StampGrid current={card.currentPoints} total={card.program.stampsRequired} fg={fg} />
+        )}
 
         {/* QR */}
         <div className="flex justify-center bg-white rounded-2xl p-4 mb-4">
@@ -183,6 +248,13 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
           <p className="text-xs opacity-50 mt-0.5">{card.totalVisits} visitas</p>
         </div>
       </div>
+
+      {/* Aviso de expiración */}
+      {expirationText && (
+        <div className={`w-full max-w-sm rounded-2xl px-4 py-3 mb-4 text-sm ${expirationText.urgent ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-white border border-gray-200 text-gray-500"}`}>
+          {expirationText.text}
+        </div>
+      )}
 
       {/* Acciones */}
       <div className="w-full max-w-sm space-y-3">
@@ -224,13 +296,8 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
               <ul className="divide-y divide-gray-100">
                 {transactions.map((tx) => (
                   <li key={tx.id} className="flex items-center gap-3 px-4 py-3">
-                    {/* Icono */}
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                      tx.type === "earn"
-                        ? "bg-green-100"
-                        : tx.type === "redeem"
-                        ? "bg-amber-100"
-                        : "bg-gray-100"
+                      tx.type === "earn" ? "bg-green-100" : tx.type === "redeem" ? "bg-amber-100" : "bg-gray-100"
                     }`}>
                       {tx.type === "earn" ? (
                         <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -238,7 +305,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
                         </svg>
                       ) : tx.type === "redeem" ? (
                         <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a4 4 0 00-4-4H5.45a1 1 0 00-.8.4l-.9 1.2A1 1 0 004 4.2V5a1 1 0 001 1h1" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                         </svg>
                       ) : (
                         <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -246,21 +313,17 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
                         </svg>
                       )}
                     </div>
-
-                    {/* Descripción y fecha */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {tx.description ?? (tx.type === "earn" ? "Puntos ganados" : tx.type === "redeem" ? "Canje" : "Ajuste")}
+                        {tx.description ?? (tx.type === "earn" ? (isStamps ? "Sello" : "Puntos ganados") : tx.type === "redeem" ? "Canje" : "Ajuste")}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDate(tx.createdAt)} · {formatTime(tx.createdAt)}
                         {tx.amountSpent && ` · $${parseFloat(tx.amountSpent).toFixed(0)} MXN`}
                       </p>
                     </div>
-
-                    {/* Puntos */}
                     <span className={`text-sm font-bold shrink-0 ${tx.points > 0 ? "text-green-600" : "text-red-500"}`}>
-                      {tx.points > 0 ? "+" : ""}{tx.points} pts
+                      {tx.points > 0 ? "+" : ""}{tx.points} {isStamps ? "sello" : "pts"}
                     </span>
                   </li>
                 ))}
@@ -274,8 +337,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
           <p className="text-sm font-semibold text-gray-800 mb-2">Guardar en tu pantalla de inicio</p>
           <div className="space-y-1.5 text-sm text-gray-500">
             <p>
-              <span className="font-medium text-gray-700">iPhone:</span> Toca el botón de compartir
-              {" "}
+              <span className="font-medium text-gray-700">iPhone:</span> Toca el botón de compartir{" "}
               <span className="inline-block border border-gray-300 rounded px-1 text-xs">⬆</span>
               {" → "}Añadir a pantalla de inicio
             </p>

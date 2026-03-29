@@ -62,20 +62,24 @@ model Customer {
 }
 
 model LoyaltyProgram {
-  id                String   @id @default(uuid())
-  businessId        String   @map("business_id")
-  name              String
-  pointsPerVisit    Int      @default(1) @map("points_per_visit")
-  pointsPerCurrency Int      @default(0) @map("points_per_currency")
-  cardBgColor       String   @default("#1a1a2e") @map("card_bg_color")
-  cardTextColor     String   @default("#ffffff") @map("card_text_color")
-  cardLogoUrl       String?  @map("card_logo_url")
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id                   String   @id @default(uuid())
+  businessId           String   @map("business_id")
+  name                 String
+  programType          String   @default("points") @map("program_type") // "points" | "stamps"
+  pointsPerVisit       Int      @default(1) @map("points_per_visit")
+  pointsPerCurrency    Int      @default(0) @map("points_per_currency")
+  stampsRequired       Int      @default(10) @map("stamps_required")
+  pointsExpirationDays Int?     @map("points_expiration_days") // null = no expira
+  cardBgColor          String   @default("#1a1a2e") @map("card_bg_color")
+  cardTextColor        String   @default("#ffffff") @map("card_text_color")
+  cardLogoUrl          String?  @map("card_logo_url")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
 
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   rewards      Reward[]
   loyaltyCards LoyaltyCard[]
+  tiers        Tier[]
 
   @@map("loyalty_programs")
 }
@@ -91,6 +95,7 @@ model LoyaltyCard {
   googlePassId      String?   @map("google_pass_id")
   applePassSerial   String?   @map("apple_pass_serial")
   lastVisit         DateTime? @map("last_visit")
+  pointsExpiresAt   DateTime? @map("points_expires_at")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -100,6 +105,21 @@ model LoyaltyCard {
 
   @@unique([customerId, programId])
   @@map("loyalty_cards")
+}
+
+model Tier {
+  id         String   @id @default(uuid())
+  programId  String   @map("program_id")
+  name       String
+  minPoints  Int      @map("min_points") // basado en totalPointsEarned (puntos de vida)
+  color      String   @default("#CD7F32") // hex
+  benefits   String?
+  multiplier Float    @default(1.0) // multiplicador de puntos (1.5 = 50% extra)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  program LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@map("tiers")
 }
 
 model Reward {
