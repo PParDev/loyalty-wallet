@@ -156,7 +156,7 @@ export async function createOrUpdateLoyaltyObject(cardId: string, token: string)
     state: "ACTIVE",
     loyaltyPoints: {
       label: "Puntos",
-      balance: { int: card.currentPoints },
+      balance: { int: Math.round(card.currentPoints) },
     },
     barcode: {
       type: "QR_CODE",
@@ -248,7 +248,7 @@ export async function updateCardPoints(cardId: string): Promise<void> {
   }
 
   const patch: Record<string, unknown> = {
-    loyaltyPoints: { balance: { int: card.currentPoints } },
+    loyaltyPoints: { balance: { int: Math.round(card.currentPoints) } },
     // notifyPreference es transitorio: Google lo procesa y lo descarta, no queda guardado
     notifyPreference: "notifyOnUpdate",
   };
