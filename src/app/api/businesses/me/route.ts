@@ -91,10 +91,14 @@ export async function PUT(req: Request) {
       });
     }
 
-    // Sincronizar clase en Google Wallet en segundo plano (no bloquear la respuesta)
-    getToken()
-      .then((token) => createOrUpdateLoyaltyClass(session.user.businessId, token))
-      .catch((err) => console.error("[settings] Error sincronizando clase GW:", err));
+    // Sincronizar clase en Google Wallet (debe completar antes de que Vercel cierre la función)
+    try {
+      const token = await getToken();
+      await createOrUpdateLoyaltyClass(session.user.businessId, token);
+    } catch (err) {
+      console.error("[settings] Error sincronizando clase GW:", err);
+      // No falla el guardado si Google Wallet falla
+    }
 
     return NextResponse.json<ApiResponse>({ success: true, data: business });
   } catch (err) {
