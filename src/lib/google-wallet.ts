@@ -103,8 +103,15 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     };
   }
 
+  console.log("[GW] class fields from DB:", JSON.stringify({
+    wordmarkImageUrl: b.wordmarkImageUrl,
+    homepageUrl: b.homepageUrl,
+    homepageLabel: b.homepageLabel,
+    walletCallbackUrl: b.walletCallbackUrl,
+  }));
+
   if (b.wordmarkImageUrl) {
-    loyaltyClass.wordmarkImage = {
+    loyaltyClass.wordMark = {
       sourceUri: { uri: b.wordmarkImageUrl },
       contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
     };
