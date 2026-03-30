@@ -49,7 +49,8 @@ async function upsert(url: string, body: object, token: string): Promise<void> {
       const parsed = JSON.parse(patchBody);
       console.log("[GW] PATCH fields:", JSON.stringify({
         hasHeroImage: !!parsed.heroImage,
-        hasWordmarkImage: !!parsed.wordmarkImage,
+        hasWordmarkImage: !!parsed.wordmarkImage || !!parsed.wordMark,
+        wordMark: parsed.wordMark?.sourceUri?.uri?.slice(0, 60),
         hasHomepageUri: !!parsed.homepageUri,
         hasCallbackOptions: !!parsed.callbackOptions,
         heroImage: parsed.heroImage?.sourceUri?.uri?.slice(0, 60),
