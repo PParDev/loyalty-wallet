@@ -28,6 +28,11 @@ interface BusinessData {
   longitude: string | null;
   geoRadiusMeters: number;
   links: BusinessLink[];
+  heroImageUrl: string | null;
+  wordmarkImageUrl: string | null;
+  homepageLabel: string | null;
+  homepageUrl: string | null;
+  walletCallbackUrl: string | null;
   loyaltyPrograms: ProgramData[];
 }
 
@@ -49,6 +54,11 @@ export default function SettingsPage() {
     longitude: string;
     geoRadiusMeters: number;
     links: BusinessLink[];
+    heroImageUrl: string;
+    wordmarkImageUrl: string;
+    homepageLabel: string;
+    homepageUrl: string;
+    walletCallbackUrl: string;
     programName: string;
     earningMode: "visit" | "amount";
     cardBgColor: string;
@@ -59,7 +69,8 @@ export default function SettingsPage() {
   }>({
     name: "", category: "", description: "", logoUrl: "", phone: "", email: "",
     address: "", city: "", latitude: "", longitude: "", geoRadiusMeters: 200,
-    links: [], programName: "", earningMode: "visit",
+    links: [], heroImageUrl: "", wordmarkImageUrl: "", homepageLabel: "", homepageUrl: "", walletCallbackUrl: "",
+    programName: "", earningMode: "visit",
     cardBgColor: "#1a1a2e", cardTextColor: "#ffffff",
     pointsPerVisit: 1, pointsPerCurrency: 0,
     pointsExpirationDays: "",
@@ -91,6 +102,11 @@ export default function SettingsPage() {
             longitude: b.longitude ? String(b.longitude) : "",
             geoRadiusMeters: b.geoRadiusMeters,
             links: Array.isArray(b.links) ? b.links : [],
+            heroImageUrl: b.heroImageUrl ?? "",
+            wordmarkImageUrl: b.wordmarkImageUrl ?? "",
+            homepageLabel: b.homepageLabel ?? "",
+            homepageUrl: b.homepageUrl ?? "",
+            walletCallbackUrl: b.walletCallbackUrl ?? "",
             programName: prog?.name ?? "",
             earningMode: (prog?.earningMode as "visit" | "amount") ?? "visit",
             cardBgColor: prog?.cardBgColor ?? "#1a1a2e",
@@ -451,6 +467,70 @@ export default function SettingsPage() {
               Tip: puedes poner <code className="bg-gray-100 px-1 rounded">https://wa.me/52311XXXXXXX</code> para WhatsApp directo.
             </p>
           )}
+        </section>
+
+        {/* ── Google Wallet — clase ── */}
+        <section className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 space-y-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Google Wallet — diseño avanzado</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Campos opcionales que aparecen en la clase de la tarjeta dentro de Google Wallet.</p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Hero image (URL)</label>
+            <input
+              value={form.heroImageUrl}
+              onChange={(e) => setForm({ ...form, heroImageUrl: e.target.value })}
+              placeholder="https://... (imagen de banner en la tarjeta)"
+              className={inputClass}
+            />
+            <p className="text-xs text-gray-400 mt-1">Imagen panorámica que aparece en la parte superior de la tarjeta. Recomendado: 1032×336 px.</p>
+          </div>
+
+          <div>
+            <label className={labelClass}>Wordmark image (URL)</label>
+            <input
+              value={form.wordmarkImageUrl}
+              onChange={(e) => setForm({ ...form, wordmarkImageUrl: e.target.value })}
+              placeholder="https://... (logotipo en texto)"
+              className={inputClass}
+            />
+            <p className="text-xs text-gray-400 mt-1">Logotipo en formato texto/wordmark. Recomendado: fondo transparente, alto contraste.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Etiqueta del enlace principal</label>
+              <input
+                value={form.homepageLabel}
+                onChange={(e) => setForm({ ...form, homepageLabel: e.target.value })}
+                placeholder="Ej: Visitar sitio web"
+                maxLength={50}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>URL del enlace principal</label>
+              <input
+                value={form.homepageUrl}
+                onChange={(e) => setForm({ ...form, homepageUrl: e.target.value })}
+                placeholder="https://..."
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 -mt-2">Botón principal que aparece en la tarjeta (sitio web, WhatsApp, etc.).</p>
+
+          <div>
+            <label className={labelClass}>URL de callback</label>
+            <input
+              value={form.walletCallbackUrl}
+              onChange={(e) => setForm({ ...form, walletCallbackUrl: e.target.value })}
+              placeholder="https://tudominio.com/api/wallet/callback"
+              className={inputClass}
+            />
+            <p className="text-xs text-gray-400 mt-1">Google notifica a esta URL cuando alguien agrega o elimina la tarjeta de su wallet.</p>
+          </div>
         </section>
 
         <div className="pb-6">

@@ -40,6 +40,11 @@ const updateSchema = z.object({
   logoUrl: z.string().url().optional().or(z.literal("")),
   category: z.string().optional(),
   links: z.array(linkSchema).max(5).optional(),
+  heroImageUrl: z.string().url().optional().or(z.literal("")),
+  wordmarkImageUrl: z.string().url().optional().or(z.literal("")),
+  homepageLabel: z.string().max(50).optional(),
+  homepageUrl: z.string().url().optional().or(z.literal("")),
+  walletCallbackUrl: z.string().url().optional().or(z.literal("")),
   // Datos del programa de lealtad
   programName: z.string().min(2).optional(),
   cardBgColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
@@ -61,9 +66,12 @@ export async function PUT(req: Request) {
 
     const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, earningMode, pointsExpirationDays, links, ...businessData } = data;
 
-    // Normalizar logoUrl vacío → null
-    if ("logoUrl" in businessData && businessData.logoUrl === "") {
-      (businessData as Record<string, unknown>).logoUrl = null;
+    // Normalizar URLs vacías → null
+    const urlFields = ["logoUrl", "heroImageUrl", "wordmarkImageUrl", "homepageUrl", "walletCallbackUrl"] as const;
+    for (const field of urlFields) {
+      if (field in businessData && (businessData as Record<string, unknown>)[field] === "") {
+        (businessData as Record<string, unknown>)[field] = null;
+      }
     }
 
     const business = await prisma.business.update({

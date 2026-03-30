@@ -22,6 +22,11 @@ model Business {
   address         String?
   city            String?
   links           Json     @default("[]")
+  heroImageUrl    String?  @map("hero_image_url")
+  wordmarkImageUrl String? @map("wordmark_image_url")
+  homepageLabel   String?  @map("homepage_label")
+  homepageUrl     String?  @map("homepage_url")
+  walletCallbackUrl String? @map("wallet_callback_url")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")

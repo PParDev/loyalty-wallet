@@ -64,6 +64,14 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
   const classId = `${ISSUER_ID}.business_${businessId}`;
   const logoUri = business.logoUrl ?? "https://placehold.co/128x128/1a1a2e/ffffff.png";
 
+  const b = business as typeof business & {
+    heroImageUrl: string | null;
+    wordmarkImageUrl: string | null;
+    homepageLabel: string | null;
+    homepageUrl: string | null;
+    walletCallbackUrl: string | null;
+  };
+
   const loyaltyClass: Record<string, unknown> = {
     id: classId,
     issuerName: business.name,
@@ -75,6 +83,34 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     hexBackgroundColor: program.cardBgColor,
     reviewStatus: "UNDER_REVIEW",
   };
+
+  if (b.heroImageUrl) {
+    loyaltyClass.heroImage = {
+      sourceUri: { uri: b.heroImageUrl },
+      contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
+    };
+  }
+
+  if (b.wordmarkImageUrl) {
+    loyaltyClass.wordmarkImage = {
+      sourceUri: { uri: b.wordmarkImageUrl },
+      contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
+    };
+  }
+
+  if (b.homepageUrl) {
+    loyaltyClass.homepageUri = {
+      uri: b.homepageUrl,
+      description: b.homepageLabel ?? business.name,
+    };
+  }
+
+  if (b.walletCallbackUrl) {
+    loyaltyClass.callbackOptions = {
+      url: b.walletCallbackUrl,
+      updateRequestUrl: b.walletCallbackUrl,
+    };
+  }
 
   if (business.latitude && business.longitude) {
     const lat = Number(business.latitude);
