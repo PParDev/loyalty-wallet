@@ -77,7 +77,14 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
   };
 
   if (business.latitude && business.longitude) {
-    loyaltyClass.merchantLocations = [{ latitude: Number(business.latitude), longitude: Number(business.longitude) }];
+    const lat = Number(business.latitude);
+    const lon = Number(business.longitude);
+
+    // Para las notificaciones push (campo moderno API v1)
+    loyaltyClass.merchantLocations = [{ latitude: lat, longitude: lon }];
+    
+    // Para que se visualice correctamente en la Consola de Google Wallet (campo legacy)
+    loyaltyClass.locations = [{ latitude: lat, longitude: lon }];
   }
 
   // Links personalizados configurados por el negocio
