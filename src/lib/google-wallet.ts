@@ -45,7 +45,18 @@ async function upsert(url: string, body: object, token: string): Promise<void> {
       console.error("[GW] PATCH error:", patchBody);
       throw new Error(`PATCH failed (${patchRes.status}): ${patchBody}`);
     }
-    console.log("[GW] PATCH ok:", patchBody.slice(0, 300));
+    try {
+      const parsed = JSON.parse(patchBody);
+      console.log("[GW] PATCH fields:", JSON.stringify({
+        hasHeroImage: !!parsed.heroImage,
+        hasWordmarkImage: !!parsed.wordmarkImage,
+        hasHomepageUri: !!parsed.homepageUri,
+        hasCallbackOptions: !!parsed.callbackOptions,
+        heroImage: parsed.heroImage?.sourceUri?.uri?.slice(0, 60),
+        wordmarkImage: parsed.wordmarkImage?.sourceUri?.uri?.slice(0, 60),
+        homepageUri: parsed.homepageUri,
+      }));
+    } catch { console.log("[GW] PATCH ok (raw):", patchBody.slice(0, 500)); }
     return;
   }
 
