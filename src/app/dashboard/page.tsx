@@ -27,19 +27,36 @@ const IconCheck = () => (
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<RecentActivity[]>([]);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const ACTIVITY_LIMIT = 20;
+
   useEffect(() => {
-    Promise.all([
-      fetch("/api/stats/overview").then((r) => r.json()),
-      fetch("/api/stats/activity").then((r) => r.json()),
-    ]).then(([statsRes, activityRes]) => {
-      if (statsRes.success) setStats(statsRes.data);
-      if (activityRes.success) setActivity(activityRes.data);
-    }).finally(() => setLoading(false));
+    fetch("/api/stats/overview")
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setStats(res.data); })
+      .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setActivityLoading(true);
+    fetch(`/api/stats/activity?page=${activityPage}&limit=${ACTIVITY_LIMIT}`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success) {
+          setActivity(res.data.activity);
+          setActivityTotal(res.data.total);
+        }
+      })
+      .finally(() => setActivityLoading(false));
+  }, [activityPage]);
+
   if (loading) return <div className="p-8 text-gray-500">Cargando estadísticas...</div>;
+
+  const totalPages = Math.ceil(activityTotal / ACTIVITY_LIMIT);
 
   return (
     <div className="p-8">
@@ -55,11 +72,14 @@ export default function DashboardPage() {
 
       {/* Actividad reciente */}
       <div className="bg-white rounded-xl border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Actividad reciente</h3>
+          <span className="text-sm text-gray-500">{activityTotal} transacciones</span>
         </div>
         <div className="divide-y divide-gray-100">
-          {activity.length === 0 ? (
+          {activityLoading ? (
+            <div className="p-6 text-center text-gray-400 text-sm">Cargando...</div>
+          ) : activity.length === 0 ? (
             <div className="p-6 text-center text-gray-400 text-sm">Sin actividad registrada</div>
           ) : (
             activity.map((item) => (
@@ -75,6 +95,27 @@ export default function DashboardPage() {
             ))
           )}
         </div>
+        {totalPages > 1 && (
+          <div className="px-4 py-3 border-t border-gray-200 flex gap-2 justify-center">
+            <button
+              onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+              disabled={activityPage === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <span className="px-3 py-1 text-sm text-gray-600">
+              Página {activityPage} de {totalPages}
+            </span>
+            <button
+              onClick={() => setActivityPage((p) => p + 1)}
+              disabled={activityPage >= totalPages}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

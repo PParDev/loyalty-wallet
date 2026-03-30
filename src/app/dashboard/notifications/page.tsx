@@ -24,20 +24,27 @@ const statusLabels: Record<string, string> = {
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", message: "", type: "push", scheduledAt: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = async () => {
+  const LIMIT = 15;
+
+  const fetchNotifications = async (p = page) => {
     setLoading(true);
-    const res = await fetch("/api/notifications").then((r) => r.json());
-    if (res.success) setNotifications(res.data);
+    const res = await fetch(`/api/notifications?page=${p}&limit=${LIMIT}`).then((r) => r.json());
+    if (res.success) {
+      setNotifications(res.data.notifications);
+      setTotal(res.data.total);
+    }
     setLoading(false);
   };
 
-  useEffect(() => { fetchNotifications(); }, []);
+  useEffect(() => { fetchNotifications(page); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +65,8 @@ export default function NotificationsPage() {
     if (res.success) {
       setShowForm(false);
       setForm({ title: "", message: "", type: "push", scheduledAt: "" });
-      fetchNotifications();
+      setPage(1);
+      fetchNotifications(1);
     } else {
       setError(res.error);
     }
@@ -68,7 +76,10 @@ export default function NotificationsPage() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Notificaciones</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Notificaciones</h2>
+          {total > 0 && <p className="text-sm text-gray-500 mt-0.5">{total} total</p>}
+        </div>
         <button
           onClick={() => setShowForm(true)}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
@@ -158,6 +169,27 @@ export default function NotificationsPage() {
               </div>
             </div>
           ))
+        )}
+        {Math.ceil(total / LIMIT) > 1 && (
+          <div className="px-4 py-3 flex gap-2 justify-center">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <span className="px-3 py-1 text-sm text-gray-600">
+              Página {page} de {Math.ceil(total / LIMIT)}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= Math.ceil(total / LIMIT)}
+              className="px-3 py-1 border rounded text-sm disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
         )}
       </div>
     </div>

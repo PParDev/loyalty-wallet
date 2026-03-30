@@ -6,17 +6,28 @@ import { prisma } from "@/lib/prisma";
 import { getToken, sendNotificationToWalletCards } from "@/lib/google-wallet";
 import type { ApiResponse } from "@/types";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json<ApiResponse>({ success: false, error: "No autorizado" }, { status: 401 });
 
-  const notifications = await prisma.notification.findMany({
-    where: { businessId: session.user.businessId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "15")));
+  const skip = (page - 1) * limit;
 
-  return NextResponse.json<ApiResponse>({ success: true, data: notifications });
+  const where = { businessId: session.user.businessId };
+
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.notification.count({ where }),
+  ]);
+
+  return NextResponse.json<ApiResponse>({ success: true, data: { notifications, total, page, limit } });
 }
 
 const createSchema = z.object({
