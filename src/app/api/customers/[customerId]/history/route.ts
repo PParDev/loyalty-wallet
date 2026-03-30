@@ -6,11 +6,12 @@ import type { ApiResponse } from "@/types";
 
 export async function GET(
   req: Request,
-  { params }: { params: { customerId: string } }
+  { params }: { params: Promise<{ customerId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json<ApiResponse>({ success: false, error: "No autorizado" }, { status: 401 });
 
+  const { customerId } = await params;
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
@@ -19,7 +20,7 @@ export async function GET(
   // Verify the card belongs to this business
   const card = await prisma.loyaltyCard.findFirst({
     where: {
-      customerId: params.customerId,
+      customerId,
       program: { businessId: session.user.businessId },
     },
     include: {
