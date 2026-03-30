@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getToken, createOrUpdateLoyaltyClass } from "@/lib/google-wallet";
 import type { ApiResponse } from "@/types";
 
 export async function GET() {
@@ -89,6 +90,11 @@ export async function PUT(req: Request) {
         data: programUpdate,
       });
     }
+
+    // Sincronizar clase en Google Wallet en segundo plano (no bloquear la respuesta)
+    getToken()
+      .then((token) => createOrUpdateLoyaltyClass(session.user.businessId, token))
+      .catch((err) => console.error("[settings] Error sincronizando clase GW:", err));
 
     return NextResponse.json<ApiResponse>({ success: true, data: business });
   } catch (err) {
