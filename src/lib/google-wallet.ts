@@ -40,11 +40,12 @@ async function upsert(url: string, body: object, token: string): Promise<void> {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    const patchBody = await patchRes.text();
     if (!patchRes.ok) {
-      const patchErr = await patchRes.text();
-      console.error("[GW] PATCH error:", patchErr);
-      throw new Error(`PATCH failed (${patchRes.status}): ${patchErr}`);
+      console.error("[GW] PATCH error:", patchBody);
+      throw new Error(`PATCH failed (${patchRes.status}): ${patchBody}`);
     }
+    console.log("[GW] PATCH ok:", patchBody.slice(0, 300));
     return;
   }
 
