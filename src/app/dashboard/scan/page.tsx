@@ -277,14 +277,18 @@ export default function ScanPage() {
               {scanResult.totalVisits} visitas totales
             </div>
 
-            {scanResult.availableRewards.length > 0 && (
-              <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                {scanResult.availableRewards.length} recompensa{scanResult.availableRewards.length > 1 ? "s" : ""} disponible{scanResult.availableRewards.length > 1 ? "s" : ""}
-              </div>
-            )}
+            {(() => {
+              const redeemable = scanResult.availableRewards.filter((r) => r.pointsRequired <= scanResult.currentPoints);
+              if (redeemable.length === 0) return null;
+              return (
+                <div className="mt-3 inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  {redeemable.length} recompensa{redeemable.length > 1 ? "s" : ""} disponible{redeemable.length > 1 ? "s" : ""}
+                </div>
+              );
+            })()}
           </div>
 
           {state === "result" && (
@@ -300,7 +304,7 @@ export default function ScanPage() {
                   onClick={() => setState("redeeming")}
                   className="w-full bg-amber-500 text-white py-3 rounded-lg font-medium hover:bg-amber-600"
                 >
-                  Canjear recompensa
+                  Ver recompensas
                 </button>
               )}
               <button onClick={reset} className="w-full text-gray-500 py-2 text-sm hover:text-gray-700">
@@ -367,20 +371,31 @@ export default function ScanPage() {
 
           {state === "redeeming" && (
             <div className="p-4 space-y-2">
-              <h4 className="font-medium text-gray-900 mb-3">Recompensas disponibles</h4>
-              {scanResult.availableRewards.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => handleRedeem(r.id)}
-                  className="w-full text-left border border-gray-200 rounded-lg p-3 hover:border-amber-400 hover:bg-amber-50 transition-colors"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-900">{r.name}</span>
-                    <span className="text-sm text-amber-600 font-semibold">{r.pointsRequired} pts</span>
-                  </div>
-                  {r.description && <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>}
-                </button>
-              ))}
+              <h4 className="font-medium text-gray-900 mb-3">Recompensas</h4>
+              {scanResult.availableRewards.map((r) => {
+                const canRedeem = r.pointsRequired <= scanResult.currentPoints;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => canRedeem && handleRedeem(r.id)}
+                    disabled={!canRedeem}
+                    className={`w-full text-left border rounded-lg p-3 transition-colors ${
+                      canRedeem
+                        ? "border-gray-200 hover:border-amber-400 hover:bg-amber-50"
+                        : "border-gray-100 bg-gray-50 opacity-50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className={`font-medium ${canRedeem ? "text-gray-900" : "text-gray-400"}`}>{r.name}</span>
+                      <span className={`text-sm font-semibold ${canRedeem ? "text-amber-600" : "text-gray-400"}`}>{r.pointsRequired} pts</span>
+                    </div>
+                    {r.description && <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>}
+                    {!canRedeem && (
+                      <p className="text-xs text-gray-400 mt-0.5">Faltan {r.pointsRequired - scanResult.currentPoints} pts</p>
+                    )}
+                  </button>
+                );
+              })}
               <button onClick={() => setState("result")} className="w-full text-gray-500 py-2 text-sm mt-2">
                 Cancelar
               </button>

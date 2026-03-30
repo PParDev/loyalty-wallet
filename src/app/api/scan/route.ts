@@ -26,7 +26,6 @@ function buildScanResult(card: {
     tiers: { id: string; name: string; minPoints: number; color: string; benefits: string | null; multiplier: number }[];
   };
 }): CardScanResult {
-  const availableRewards = card.program.rewards.filter((r) => r.pointsRequired <= card.currentPoints);
   const activeTier = [...card.program.tiers]
     .sort((a, b) => b.minPoints - a.minPoints)
     .find((t) => t.minPoints <= card.totalPointsEarned) ?? null;
@@ -39,7 +38,7 @@ function buildScanResult(card: {
     totalVisits: card.totalVisits,
     lastVisit: card.lastVisit,
     pointsExpiresAt: card.pointsExpiresAt,
-    availableRewards: availableRewards.map((r) => ({
+    availableRewards: card.program.rewards.map((r) => ({
       id: r.id,
       name: r.name,
       description: r.description,
