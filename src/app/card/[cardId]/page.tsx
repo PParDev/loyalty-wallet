@@ -184,7 +184,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
             <p className="text-sm opacity-70 mt-0.5">{card.program.name}</p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold">{card.currentPoints}</p>
+            <p className="text-4xl font-bold">{Math.floor(card.currentPoints)}</p>
             <p className="text-xs opacity-60">puntos</p>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
                       </p>
                     </div>
                     <span className={`text-sm font-bold shrink-0 ${tx.points > 0 ? "text-green-600" : "text-red-500"}`}>
-                      {tx.points > 0 ? "+" : ""}{tx.points} pts
+                      {tx.points > 0 ? "+" : ""}{tx.points % 1 === 0 ? tx.points : tx.points.toFixed(2)} pts
                     </span>
                   </li>
                 ))}

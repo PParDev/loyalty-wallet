@@ -78,7 +78,7 @@ export default function CustomersPage() {
                   <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
                   <td className="px-4 py-3 text-gray-600">{c.phone}</td>
                   <td className="px-4 py-3">
-                    <span className="font-semibold text-indigo-600">{c.currentPoints}</span>
+                    <span className="font-semibold text-indigo-600">{Math.floor(c.currentPoints)}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{c.totalVisits}</td>
                   <td className="px-4 py-3 text-gray-500">

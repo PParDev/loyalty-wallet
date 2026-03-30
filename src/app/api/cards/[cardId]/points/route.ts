@@ -79,7 +79,8 @@ export async function POST(
     // Multiplicador de tier (basado en totalPointsEarned histórico)
     const activeTier = card.program.tiers.find((t) => t.minPoints <= card.totalPointsEarned);
     const multiplier = activeTier?.multiplier ?? 1.0;
-    const pointsToAdd = Math.round(base * multiplier);
+    // Guardamos el valor exacto (float) para que el multiplicador de tier funcione aunque la base sea 1
+    const pointsToAdd = base * multiplier;
 
     // 3. Nueva fecha de expiración (se renueva con cada actividad)
     const newExpiresAt = card.program.pointsExpirationDays
@@ -104,7 +105,7 @@ export async function POST(
           type: "earn",
           points: pointsToAdd,
           amountSpent: data.amountSpent,
-          description: data.description ?? `+${pointsToAdd} puntos`,
+          description: data.description ?? `+${pointsToAdd % 1 === 0 ? pointsToAdd : pointsToAdd.toFixed(2)} puntos`,
           createdById: session.user.id,
         },
       }),

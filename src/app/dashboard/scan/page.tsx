@@ -76,7 +76,8 @@ export default function ScanPage() {
     }).then((r) => r.json());
 
     if (res.success) {
-      let feedbackMsg = `+${res.data.pointsAdded} puntos. Total: ${res.data.newPoints} pts`;
+      const added = res.data.pointsAdded % 1 === 0 ? res.data.pointsAdded : res.data.pointsAdded.toFixed(2);
+      let feedbackMsg = `+${added} puntos. Total: ${Math.floor(res.data.newPoints)} pts`;
       if (res.data.pointsExpired) feedbackMsg = `⚠️ Puntos vencidos reiniciados. ${feedbackMsg}`;
       setFeedback(feedbackMsg);
       setScanResult((prev) => prev ? { ...prev, currentPoints: res.data.newPoints } : prev);
@@ -97,7 +98,7 @@ export default function ScanPage() {
     }).then((r) => r.json());
 
     if (res.success) {
-      setFeedback(`Canje exitoso: ${res.data.reward}. Puntos restantes: ${res.data.remainingPoints}`);
+      setFeedback(`Canje exitoso: ${res.data.reward}. Puntos restantes: ${Math.floor(res.data.remainingPoints)}`);
       setScanResult((prev) => prev ? { ...prev, currentPoints: res.data.remainingPoints } : prev);
       setState("result");
     } else {
@@ -245,7 +246,7 @@ export default function ScanPage() {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold text-indigo-600">{scanResult.currentPoints}</p>
+                <p className="text-3xl font-bold text-indigo-600">{Math.floor(scanResult.currentPoints)}</p>
                 <p className="text-xs text-gray-500">puntos</p>
               </div>
             </div>
@@ -261,7 +262,7 @@ export default function ScanPage() {
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
                     <span>Próxima: <span className="font-medium text-gray-700">{nextReward.name}</span></span>
-                    <span>{scanResult.currentPoints}/{nextReward.pointsRequired} pts</span>
+                    <span>{Math.floor(scanResult.currentPoints)}/{nextReward.pointsRequired} pts</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-2">
                     <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
@@ -391,7 +392,7 @@ export default function ScanPage() {
                     </div>
                     {r.description && <p className="text-xs text-gray-500 mt-0.5">{r.description}</p>}
                     {!canRedeem && (
-                      <p className="text-xs text-gray-400 mt-0.5">Faltan {r.pointsRequired - scanResult.currentPoints} pts</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Faltan {Math.ceil(r.pointsRequired - scanResult.currentPoints)} pts</p>
                     )}
                   </button>
                 );
