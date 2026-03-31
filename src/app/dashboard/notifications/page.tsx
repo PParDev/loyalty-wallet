@@ -31,6 +31,7 @@ export default function NotificationsPage() {
   const [form, setForm] = useState({ title: "", message: "", type: "push", scheduledAt: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const LIMIT = 15;
 
@@ -71,6 +72,14 @@ export default function NotificationsPage() {
       setError(res.error);
     }
     setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar esta notificación? Se borrará de todas las tarjetas en Google Wallet.")) return;
+    setDeletingId(id);
+    await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+    setDeletingId(null);
+    fetchNotifications(page);
   };
 
   return (
@@ -146,17 +155,33 @@ export default function NotificationsPage() {
           notifications.map((n) => (
             <div key={n.id} className="p-4">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-900">{n.title}</h3>
                   <p className="text-sm text-gray-500 mt-0.5">{n.message}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ml-4 shrink-0 ${
-                  n.status === "sent" ? "bg-green-50 text-green-600" :
-                  n.status === "scheduled" ? "bg-blue-50 text-blue-600" :
-                  "bg-gray-50 text-gray-500"
-                }`}>
-                  {statusLabels[n.status] ?? n.status}
-                </span>
+                <div className="flex items-center gap-2 ml-4 shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    n.status === "sent" ? "bg-green-50 text-green-600" :
+                    n.status === "scheduled" ? "bg-blue-50 text-blue-600" :
+                    "bg-gray-50 text-gray-500"
+                  }`}>
+                    {statusLabels[n.status] ?? n.status}
+                  </span>
+                  <button
+                    onClick={() => handleDelete(n.id)}
+                    disabled={deletingId === n.id}
+                    title="Eliminar notificación"
+                    className="text-gray-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                  >
+                    {deletingId === n.id ? (
+                      <span className="w-4 h-4 border border-gray-400 border-t-transparent rounded-full animate-spin block" />
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex gap-4 mt-2 text-xs text-gray-400">
                 <span>

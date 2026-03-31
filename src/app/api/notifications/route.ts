@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getToken, sendNotificationToWalletCards } from "@/lib/google-wallet";
+import { randomUUID } from "crypto";
 import type { ApiResponse } from "@/types";
 
 export async function GET(req: Request) {
@@ -48,6 +49,8 @@ export async function POST(req: Request) {
 
     const isScheduled = data.type === "scheduled" && data.scheduledAt;
 
+    const googleMessageId = randomUUID();
+
     const notification = await prisma.notification.create({
       data: {
         businessId: session.user.businessId,
@@ -57,6 +60,7 @@ export async function POST(req: Request) {
         status: isScheduled ? "scheduled" : "sent",
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
         sentAt: isScheduled ? null : new Date(),
+        googleMessageId: isScheduled ? null : googleMessageId,
       },
     });
 
@@ -67,7 +71,8 @@ export async function POST(req: Request) {
           session.user.businessId,
           data.title,
           data.message,
-          token
+          token,
+          googleMessageId
         );
         await prisma.notification.update({
           where: { id: notification.id },

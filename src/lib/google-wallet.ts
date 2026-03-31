@@ -45,19 +45,6 @@ async function upsert(url: string, body: object, token: string): Promise<void> {
       console.error("[GW] PATCH error:", patchBody);
       throw new Error(`PATCH failed (${patchRes.status}): ${patchBody}`);
     }
-    try {
-      const parsed = JSON.parse(patchBody);
-      console.log("[GW] PATCH fields:", JSON.stringify({
-        hasHeroImage: !!parsed.heroImage,
-        hasWordmarkImage: !!parsed.wordmarkImage || !!parsed.wordMark,
-        wordMark: parsed.wordMark?.sourceUri?.uri?.slice(0, 60),
-        hasHomepageUri: !!parsed.homepageUri,
-        hasCallbackOptions: !!parsed.callbackOptions,
-        heroImage: parsed.heroImage?.sourceUri?.uri?.slice(0, 60),
-        wordmarkImage: parsed.wordmarkImage?.sourceUri?.uri?.slice(0, 60),
-        homepageUri: parsed.homepageUri,
-      }));
-    } catch { console.log("[GW] PATCH ok (raw):", patchBody.slice(0, 500)); }
     return;
   }
 
@@ -103,13 +90,6 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
       contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
     };
   }
-
-  console.log("[GW] class fields from DB:", JSON.stringify({
-    wordmarkImageUrl: b.wordmarkImageUrl,
-    homepageUrl: b.homepageUrl,
-    homepageLabel: b.homepageLabel,
-    walletCallbackUrl: b.walletCallbackUrl,
-  }));
 
   if (b.wordmarkImageUrl) {
     loyaltyClass.wordMark = {
@@ -331,7 +311,8 @@ export async function sendNotificationToWalletCards(
   businessId: string,
   title: string,
   message: string,
-  token: string
+  token: string,
+  messageId: string
 ): Promise<number> {
   const cards = await prisma.loyaltyCard.findMany({
     where: {
@@ -351,7 +332,7 @@ export async function sendNotificationToWalletCards(
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: { header: title, body: message, messageType: "TEXT_AND_NOTIFY" },
+          message: { id: messageId, header: title, body: message, messageType: "TEXT_AND_NOTIFY" },
         }),
       });
       if (!res.ok) {
@@ -363,6 +344,38 @@ export async function sendNotificationToWalletCards(
   );
 
   return results.filter((r) => r.status === "fulfilled" && (r.value as Response).ok).length;
+}
+
+export async function removeNotificationFromWalletCards(
+  businessId: string,
+  messageId: string,
+  token: string
+): Promise<void> {
+  const cards = await prisma.loyaltyCard.findMany({
+    where: {
+      program: { businessId, isActive: true },
+      googlePassId: { not: null },
+    },
+    select: { id: true },
+  });
+
+  if (cards.length === 0) return;
+
+  await Promise.allSettled(
+    cards.map(async (card) => {
+      const objectId = `${ISSUER_ID}.card_${card.id}`;
+      const url = `${WALLET_API_BASE}/loyaltyObject/${objectId}/removeMessage`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`[Notify] Remove error ${res.status} para ${objectId}: ${text.slice(0, 200)}`);
+      }
+    })
+  );
 }
 
 export { getToken };

@@ -181,8 +181,9 @@ model Notification {
   message     String
   type        String    @default("push")
   status      String    @default("draft")
-  sentCount   Int       @default(0) @map("sent_count")
-  openedCount Int       @default(0) @map("opened_count")
+  sentCount       Int       @default(0) @map("sent_count")
+  openedCount     Int       @default(0) @map("opened_count")
+  googleMessageId String?   @map("google_message_id")
   scheduledAt DateTime? @map("scheduled_at")
   sentAt      DateTime? @map("sent_at")
   createdAt   DateTime  @default(now()) @map("created_at")
