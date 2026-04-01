@@ -79,7 +79,10 @@ export default function NotificationsPage() {
     setDeletingId(id);
     await fetch(`/api/notifications/${id}`, { method: "DELETE" });
     setDeletingId(null);
-    fetchNotifications(page);
+    const newTotal = total - 1;
+    const newPage = page > 1 && (page - 1) * LIMIT >= newTotal ? page - 1 : page;
+    if (newPage !== page) setPage(newPage);
+    else fetchNotifications(page);
   };
 
   return (

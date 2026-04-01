@@ -99,13 +99,16 @@ export async function PUT(req: Request) {
       });
     }
 
-    // Sincronizar clase en Google Wallet (debe completar antes de que Vercel cierre la función)
-    try {
-      const token = await getToken();
-      await createOrUpdateLoyaltyClass(session.user.businessId, token);
-    } catch (err) {
-      console.error("[settings] Error sincronizando clase GW:", err);
-      // No falla el guardado si Google Wallet falla
+    // Solo sincronizar Google Wallet si cambió algún campo que aparece en la tarjeta
+    const walletFields = ["name", "logoUrl", "heroImageUrl", "wordmarkImageUrl", "homepageUrl", "homepageLabel", "walletCallbackUrl", "latitude", "longitude", "links", "programName", "cardBgColor", "cardTextColor"];
+    const needsWalletSync = walletFields.some((f) => f in data);
+    if (needsWalletSync) {
+      try {
+        const token = await getToken();
+        await createOrUpdateLoyaltyClass(session.user.businessId, token);
+      } catch (err) {
+        console.error("[settings] Error sincronizando clase GW:", err);
+      }
     }
 
     return NextResponse.json<ApiResponse>({ success: true, data: business });

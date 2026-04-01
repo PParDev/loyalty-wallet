@@ -10,13 +10,14 @@ const db = prisma as unknown as { tier: { findMany: (args: object) => Promise<Ti
 const WALLET_API_BASE = "https://walletobjects.googleapis.com/walletobjects/v1";
 const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID!;
 
+// Reuse the same GoogleAuth instance so google-auth-library can cache the token internally
+const googleAuth = new GoogleAuth({
+  credentials: JSON.parse(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY ?? "{}"),
+  scopes: ["https://www.googleapis.com/auth/wallet_object.issuer"],
+});
+
 async function getToken(): Promise<string> {
-  const credentials = JSON.parse(process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_KEY!);
-  const auth = new GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/wallet_object.issuer"],
-  });
-  const client = await auth.getClient();
+  const client = await googleAuth.getClient();
   const result = await (client as { getAccessToken: () => Promise<{ token: string }> }).getAccessToken();
   return result.token;
 }
@@ -64,7 +65,8 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
   const classId = `${ISSUER_ID}.business_${businessId}`;
   const logoUri = business.logoUrl ?? "https://placehold.co/128x128/1a1a2e/ffffff.png";
 
-  const b = business as typeof business & {
+  // Cast needed: IDE Prisma client cache may lag behind schema migrations
+  const biz = business as typeof business & {
     heroImageUrl: string | null;
     wordmarkImageUrl: string | null;
     homepageLabel: string | null;
@@ -84,31 +86,31 @@ export async function createOrUpdateLoyaltyClass(businessId: string, token: stri
     reviewStatus: "UNDER_REVIEW",
   };
 
-  if (b.heroImageUrl) {
+  if (biz.heroImageUrl) {
     loyaltyClass.heroImage = {
-      sourceUri: { uri: b.heroImageUrl },
+      sourceUri: { uri: biz.heroImageUrl },
       contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
     };
   }
 
-  if (b.wordmarkImageUrl) {
+  if (biz.wordmarkImageUrl) {
     loyaltyClass.wordMark = {
-      sourceUri: { uri: b.wordmarkImageUrl },
+      sourceUri: { uri: biz.wordmarkImageUrl },
       contentDescription: { defaultValue: { language: "es-MX", value: business.name } },
     };
   }
 
-  if (b.homepageUrl) {
+  if (biz.homepageUrl) {
     loyaltyClass.homepageUri = {
-      uri: b.homepageUrl,
-      description: b.homepageLabel ?? business.name,
+      uri: biz.homepageUrl,
+      description: biz.homepageLabel ?? business.name,
     };
   }
 
-  if (b.walletCallbackUrl) {
+  if (biz.walletCallbackUrl) {
     loyaltyClass.callbackOptions = {
-      url: b.walletCallbackUrl,
-      updateRequestUrl: b.walletCallbackUrl,
+      url: biz.walletCallbackUrl,
+      updateRequestUrl: biz.walletCallbackUrl,
     };
   }
 
@@ -364,15 +366,32 @@ export async function removeNotificationFromWalletCards(
   await Promise.allSettled(
     cards.map(async (card) => {
       const objectId = `${ISSUER_ID}.card_${card.id}`;
-      const url = `${WALLET_API_BASE}/loyaltyObject/${objectId}/removeMessage`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messageId }),
+
+      // 1. Obtener el objeto para leer sus mensajes actuales
+      const getRes = await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        const text = await res.text();
-        console.error(`[Notify] Remove error ${res.status} para ${objectId}: ${text.slice(0, 200)}`);
+      if (!getRes.ok) {
+        console.error(`[Notify] GET 404 para ${objectId} — el objeto no existe en GW`);
+        return;
+      }
+
+      const obj = await getRes.json() as { messages?: { id?: string }[] };
+      console.log(`[Notify] Mensajes en ${objectId}:`, JSON.stringify(obj.messages?.map(m => m.id)));
+
+      const filteredMessages = (obj.messages ?? []).filter((m) => m.id !== messageId);
+
+      // 2. PATCH con los mensajes sin el eliminado
+      const patchRes = await fetch(`${WALLET_API_BASE}/loyaltyObject/${objectId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: filteredMessages }),
+      });
+      if (!patchRes.ok) {
+        const text = await patchRes.text();
+        console.error(`[Notify] PATCH error ${patchRes.status} para ${objectId}: ${text.slice(0, 200)}`);
+      } else {
+        console.log(`[Notify] Mensaje ${messageId} eliminado de ${objectId}`);
       }
     })
   );
