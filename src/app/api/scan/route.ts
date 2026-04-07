@@ -23,6 +23,7 @@ function buildScanResult(card: {
     pointsPerVisit: number;
     pointsPerCurrency: number;
     pointsExpirationDays: number | null;
+    stampsRequired: number | null;
     rewards: { id: string; name: string; description: string | null; pointsRequired: number; rewardType: string }[];
     tiers: { id: string; name: string; minPoints: number; color: string; benefits: string | null; multiplier: number }[];
   };

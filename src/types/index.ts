@@ -94,6 +94,7 @@ export interface CardScanResult {
     pointsPerVisit: number;
     pointsPerCurrency: number;
     pointsExpirationDays: number | null;
+    stampsRequired?: number | null;
   };
   tier: TierInfo | null;
 }
