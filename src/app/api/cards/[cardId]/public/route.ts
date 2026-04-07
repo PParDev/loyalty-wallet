@@ -47,10 +47,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ cardId:
         cardTextColor: card.program.cardTextColor,
         pointsPerVisit: card.program.pointsPerVisit,
         pointsExpirationDays: card.program.pointsExpirationDays,
+        stampsRequired: card.program.stampsRequired,
       },
       business: {
         name: card.program.business.name,
         logoUrl: card.program.business.logoUrl,
+        isWhiteLabel: (card.program.business as any).isWhiteLabel,
       },
       tier: activeTier,
     },

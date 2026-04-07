@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateQrData } from "@/lib/qr";
+import { rateLimitPublic, checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse } from "@/types";
 
 const schema = z.object({
@@ -12,6 +13,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const limited = await checkRateLimit(rateLimitPublic, req);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const data = schema.parse(body);

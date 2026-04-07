@@ -27,6 +27,9 @@ model Business {
   homepageLabel   String?  @map("homepage_label")
   homepageUrl     String?  @map("homepage_url")
   walletCallbackUrl String? @map("wallet_callback_url")
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  quickRegistration Boolean @default(false) @map("quick_registration")
+  isWhiteLabel    Boolean @default(false) @map("is_white_label")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -34,8 +37,27 @@ model Business {
   users           BusinessUser[]
   loyaltyPrograms LoyaltyProgram[]
   notifications   Notification[]
+  locations       Location[]
 
   @@map("businesses")
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  businessId  String   @map("business_id")
+  name        String
+  address     String?
+  city        String?
+  phone       String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  business     Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  users        BusinessUser[]
+  transactions Transaction[]
+
+  @@map("locations")
 }
 
 model BusinessUser {
@@ -45,9 +67,11 @@ model BusinessUser {
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         String   @default("admin")
+  locationId   String?  @map("location_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
   business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
   transactions Transaction[]      @relation("CreatedByUser")
   redemptions  RewardRedemption[] @relation("RedeemedByUser")
 
@@ -74,6 +98,7 @@ model LoyaltyProgram {
   pointsPerVisit       Int      @default(1) @map("points_per_visit")
   pointsPerCurrency    Float    @default(0) @map("points_per_currency")
   pointsExpirationDays Int?     @map("points_expiration_days") // null = no expira
+  stampsRequired       Int?     @map("stamps_required") @default(10) // solo para modo "stamps"
   cardBgColor          String   @default("#1a1a2e") @map("card_bg_color")
   cardTextColor        String   @default("#ffffff") @map("card_text_color")
   cardLogoUrl          String?  @map("card_logo_url")
@@ -151,9 +176,11 @@ model Transaction {
   amountSpent Decimal? @map("amount_spent")
   description String?
   createdById String   @map("created_by")
+  locationId  String?  @map("location_id")
   createdAt   DateTime @default(now()) @map("created_at")
 
   card      LoyaltyCard  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  location  Location?    @relation(fields: [locationId], references: [id], onDelete: SetNull)
   createdBy BusinessUser @relation("CreatedByUser", fields: [createdById], references: [id])
 
   @@map("transactions")

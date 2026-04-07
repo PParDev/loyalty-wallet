@@ -41,7 +41,7 @@ export default function RegisterPage() {
       redirect: false,
     });
 
-    router.push("/dashboard/settings");
+    router.push("/dashboard");
   };
 
   return (

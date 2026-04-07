@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import StampCard from "@/components/ui/StampCard";
 
 interface TierInfo {
   id: string;
@@ -26,10 +27,12 @@ interface CardData {
     cardTextColor: string;
     pointsPerVisit: number;
     pointsExpirationDays: number | null;
+    stampsRequired?: number;
   };
   business: {
     name: string;
     logoUrl: string | null;
+    isWhiteLabel: boolean;
   };
 }
 
@@ -185,7 +188,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
           </div>
           <div className="text-right">
             <p className="text-4xl font-bold">{Math.floor(card.currentPoints)}</p>
-            <p className="text-xs opacity-60">puntos</p>
+            <p className="text-xs opacity-60">{card.program.earningMode === "stamps" ? "sellos" : "puntos"}</p>
           </div>
         </div>
 
@@ -222,6 +225,19 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
           <p className="text-xs opacity-50 mt-0.5">{card.totalVisits} visitas</p>
         </div>
       </div>
+
+      {/* Stamp Card visual (solo en modo sellos) */}
+      {card.program.earningMode === "stamps" && card.program.stampsRequired && (
+        <div className="w-full max-w-sm mb-4">
+          <StampCard
+            total={card.program.stampsRequired}
+            current={Math.floor(card.currentPoints) % card.program.stampsRequired}
+            businessName={card.business.name}
+            rewardName="tu recompensa"
+            color={card.program.cardBgColor}
+          />
+        </div>
+      )}
 
       {/* Aviso de expiración */}
       {expirationText && (
@@ -321,6 +337,13 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
           </div>
         </div>
       </div>
+
+      {/* Footer Branding */}
+      {!card.business.isWhiteLabel && (
+        <div className="mt-8 text-center opacity-60">
+          <p className="text-xs text-gray-500 font-medium">Powered by LoyaltyWallet</p>
+        </div>
+      )}
     </div>
   );
 }

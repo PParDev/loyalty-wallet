@@ -9,6 +9,13 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "LoyaltyWallet — Tarjetas de lealtad digital",
   description: "Programa de lealtad digital para negocios locales en Tepic, Nayarit",
+  manifest: "/manifest.json",
+  themeColor: "#6366f1",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "LoyaltyWallet",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +23,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})}`
+          }}
+        />
       </body>
     </html>
   );

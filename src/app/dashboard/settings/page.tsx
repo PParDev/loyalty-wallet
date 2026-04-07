@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ImageUpload from "@/components/ui/ImageUpload";
+import QrDownloadSection from "@/components/dashboard/QrDownloadSection";
 import type { BusinessLink } from "@/types";
 
 interface ProgramData {
@@ -11,6 +13,7 @@ interface ProgramData {
   pointsPerVisit: number;
   pointsPerCurrency: number;
   pointsExpirationDays: number | null;
+  stampsRequired: number | null;
 }
 
 interface BusinessData {
@@ -33,6 +36,8 @@ interface BusinessData {
   homepageLabel: string | null;
   homepageUrl: string | null;
   walletCallbackUrl: string | null;
+  quickRegistration: boolean;
+  isWhiteLabel: boolean;
   loyaltyPrograms: ProgramData[];
 }
 
@@ -60,12 +65,15 @@ export default function SettingsPage() {
     homepageUrl: string;
     walletCallbackUrl: string;
     programName: string;
-    earningMode: "visit" | "amount";
+    earningMode: "visit" | "amount" | "stamps";
     cardBgColor: string;
     cardTextColor: string;
     pointsPerVisit: number;
     pointsPerCurrency: number;
     pointsExpirationDays: string; // string para el input, "" = desactivado
+    stampsRequired: number;
+    quickRegistration: boolean;
+    isWhiteLabel: boolean;
   }>({
     name: "", category: "", description: "", logoUrl: "", phone: "", email: "",
     address: "", city: "", latitude: "", longitude: "", geoRadiusMeters: 200,
@@ -74,6 +82,9 @@ export default function SettingsPage() {
     cardBgColor: "#1a1a2e", cardTextColor: "#ffffff",
     pointsPerVisit: 1, pointsPerCurrency: 0,
     pointsExpirationDays: "",
+    stampsRequired: 10,
+    quickRegistration: false,
+    isWhiteLabel: false,
   });
 
   const [loading, setLoading] = useState(true);
@@ -108,12 +119,15 @@ export default function SettingsPage() {
             homepageUrl: b.homepageUrl ?? "",
             walletCallbackUrl: b.walletCallbackUrl ?? "",
             programName: prog?.name ?? "",
-            earningMode: (prog?.earningMode as "visit" | "amount") ?? "visit",
+            earningMode: (prog?.earningMode as "visit" | "amount" | "stamps") ?? "visit",
             cardBgColor: prog?.cardBgColor ?? "#1a1a2e",
             cardTextColor: prog?.cardTextColor ?? "#ffffff",
             pointsPerVisit: prog?.pointsPerVisit ?? 1,
             pointsPerCurrency: prog?.pointsPerCurrency ?? 0,
             pointsExpirationDays: prog?.pointsExpirationDays ? String(prog.pointsExpirationDays) : "",
+            stampsRequired: prog?.stampsRequired ?? 10,
+            quickRegistration: (b as unknown as { quickRegistration: boolean }).quickRegistration ?? false,
+            isWhiteLabel: (b as unknown as { isWhiteLabel: boolean }).isWhiteLabel ?? false,
           });
         }
       })
@@ -182,21 +196,52 @@ export default function SettingsPage() {
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Configuración</h2>
 
       {business && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
-          <p className="text-sm font-medium text-indigo-700 mb-2">URL de registro de clientes</p>
-          <div className="flex items-center gap-2">
-            <code className="text-sm bg-white border border-indigo-200 rounded px-3 py-1.5 flex-1 truncate text-gray-700">
-              {registrationUrl}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(registrationUrl)}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 shrink-0 px-3 py-1.5 bg-white border border-indigo-200 rounded"
-            >
-              Copiar
-            </button>
-          </div>
+        <div className="mb-6">
+          <QrDownloadSection slug={business.slug} />
         </div>
       )}
+
+      {/* Quick Registration Toggle */}
+      <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Registro rápido</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Los clientes solo necesitan su teléfono para registrarse (sin nombre ni email).</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, quickRegistration: !form.quickRegistration })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              form.quickRegistration ? "bg-indigo-600" : "bg-gray-300"
+            }`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              form.quickRegistration ? "translate-x-6" : "translate-x-1"
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      {/* White Label Toggle */}
+      <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Modo Marca Blanca (White-label)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Oculta la mención "Powered by LoyaltyWallet" de la vista del cliente.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, isWhiteLabel: !form.isWhiteLabel })}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              form.isWhiteLabel ? "bg-indigo-600" : "bg-gray-300"
+            }`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              form.isWhiteLabel ? "translate-x-6" : "translate-x-1"
+            }`} />
+          </button>
+        </div>
+      </div>
 
       {success && (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
@@ -238,10 +283,12 @@ export default function SettingsPage() {
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className={inputClass} />
           </div>
 
-          <div>
-            <label className={labelClass}>URL del logo</label>
-            <input value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://..." className={inputClass} />
-          </div>
+          <ImageUpload
+            label="Logo del negocio"
+            value={form.logoUrl}
+            onChange={(url) => setForm({ ...form, logoUrl: url })}
+            hint="Recomendado: imagen cuadrada, fondo transparente"
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

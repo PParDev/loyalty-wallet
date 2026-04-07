@@ -51,8 +51,12 @@ const updateSchema = z.object({
   cardTextColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   pointsPerVisit: z.number().int().min(1).optional(),
   pointsPerCurrency: z.number().min(0).optional(),
-  earningMode: z.enum(["visit", "amount"]).optional(),
+  earningMode: z.enum(["visit", "amount", "stamps"]).optional(),
+  stampsRequired: z.number().int().min(3).max(20).optional(),
   pointsExpirationDays: z.number().int().min(1).nullable().optional(), // null = desactivar expiración
+  onboardingCompleted: z.boolean().optional(),
+  quickRegistration: z.boolean().optional(),
+  isWhiteLabel: z.boolean().optional(),
 });
 
 export async function PUT(req: Request) {
@@ -64,7 +68,7 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const data = updateSchema.parse(body);
 
-    const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, earningMode, pointsExpirationDays, links, ...businessData } = data;
+    const { programName, cardBgColor, cardTextColor, pointsPerVisit, pointsPerCurrency, earningMode, pointsExpirationDays, stampsRequired, links, onboardingCompleted, quickRegistration, isWhiteLabel, ...businessData } = data;
 
     // Normalizar URLs vacías → null
     const urlFields = ["logoUrl", "heroImageUrl", "wordmarkImageUrl", "homepageUrl", "walletCallbackUrl"] as const;
@@ -79,6 +83,9 @@ export async function PUT(req: Request) {
       data: {
         ...businessData,
         ...(links !== undefined ? { links: links as object[] } : {}),
+        ...(onboardingCompleted !== undefined ? { onboardingCompleted } : {}),
+        ...(quickRegistration !== undefined ? { quickRegistration } : {}),
+        ...(isWhiteLabel !== undefined ? { isWhiteLabel } : {}),
       },
     });
 
@@ -91,6 +98,7 @@ export async function PUT(req: Request) {
     if (pointsPerCurrency !== undefined) programUpdate.pointsPerCurrency = pointsPerCurrency;
     if (earningMode !== undefined) programUpdate.earningMode = earningMode;
     if (pointsExpirationDays !== undefined) programUpdate.pointsExpirationDays = pointsExpirationDays;
+    if (stampsRequired !== undefined) programUpdate.stampsRequired = stampsRequired;
 
     if (Object.keys(programUpdate).length > 0) {
       await prisma.loyaltyProgram.updateMany({

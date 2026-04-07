@@ -21,6 +21,8 @@ export async function GET(
           pointsPerCurrency: true,
           cardBgColor: true,
           cardTextColor: true,
+          earningMode: true,
+          stampsRequired: true,
         },
       },
     },
@@ -30,7 +32,7 @@ export async function GET(
     return NextResponse.json<ApiResponse>({ success: false, error: "Negocio no encontrado" }, { status: 404 });
   }
 
-  const result: BusinessPublicInfo = {
+  const result: BusinessPublicInfo & { quickRegistration: boolean } = {
     id: business.id,
     name: business.name,
     slug: business.slug,
@@ -38,7 +40,8 @@ export async function GET(
     description: business.description,
     logoUrl: business.logoUrl,
     program: business.loyaltyPrograms[0] ?? null,
+    quickRegistration: business.quickRegistration,
   };
 
-  return NextResponse.json<ApiResponse<BusinessPublicInfo>>({ success: true, data: result });
+  return NextResponse.json<ApiResponse<BusinessPublicInfo & { quickRegistration: boolean }>>({ success: true, data: result });
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { CardScanResult } from "@/types";
+import StampCard from "@/components/ui/StampCard";
 
 const QrScanner = dynamic(() => import("@/components/scan/QrScanner"), { ssr: false });
 
@@ -134,6 +135,8 @@ export default function ScanPage() {
   })();
 
   const isAmountMode = scanResult?.program.earningMode === "amount";
+  const isStampsMode = scanResult?.program.earningMode === "stamps";
+  const stampsRequired = (scanResult?.program as Record<string, unknown>)?.stampsRequired as number | undefined;
 
   return (
     <div className="p-4 md:p-8 max-w-lg mx-auto">
@@ -247,7 +250,7 @@ export default function ScanPage() {
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-indigo-600">{Math.floor(scanResult.currentPoints)}</p>
-                <p className="text-xs text-gray-500">puntos</p>
+                <p className="text-xs text-gray-500">{isStampsMode ? "sellos" : "puntos"}</p>
               </div>
             </div>
 
@@ -294,12 +297,37 @@ export default function ScanPage() {
 
           {state === "result" && (
             <div className="p-4 space-y-3">
-              <button
-                onClick={() => setState("adding_points")}
-                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
-              >
-                + Sumar puntos
-              </button>
+              {/* Stamp card visual (only in stamps mode) */}
+              {isStampsMode && stampsRequired && (
+                <div className="pb-3">
+                  <StampCard
+                    total={stampsRequired}
+                    current={Math.floor(scanResult.currentPoints) % stampsRequired}
+                    rewardName={scanResult.availableRewards[0]?.name}
+                    color={scanResult.tier?.color ?? "#6366f1"}
+                  />
+                </div>
+              )}
+
+              {isStampsMode ? (
+                <button
+                  onClick={() => {
+                    setPointsInput("1");
+                    setState("adding_points");
+                    setTimeout(() => handleAddPoints(), 0);
+                  }}
+                  className="w-full bg-indigo-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-indigo-700 active:scale-95 transition-all"
+                >
+                  ✓ Agregar sello
+                </button>
+              ) : (
+                <button
+                  onClick={() => setState("adding_points")}
+                  className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700"
+                >
+                  + Sumar puntos
+                </button>
+              )}
               {scanResult.availableRewards.length > 0 && (
                 <button
                   onClick={() => setState("redeeming")}

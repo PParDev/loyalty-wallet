@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseQrData } from "@/lib/qr";
+import { rateLimitScan, checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse, CardScanResult } from "@/types";
 
 const schema = z.object({ qrCodeData: z.string() });
@@ -51,6 +52,7 @@ function buildScanResult(card: {
       pointsPerVisit: card.program.pointsPerVisit,
       pointsPerCurrency: card.program.pointsPerCurrency,
       pointsExpirationDays: card.program.pointsExpirationDays,
+      stampsRequired: card.program.stampsRequired,
     },
     tier: activeTier,
   };
@@ -68,6 +70,9 @@ const cardInclude = {
 } as const;
 
 export async function GET(req: Request) {
+  const limited = await checkRateLimit(rateLimitScan, req);
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json<ApiResponse>({ success: false, error: "No autorizado" }, { status: 401 });
 
@@ -92,6 +97,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const limited = await checkRateLimit(rateLimitScan, req);
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json<ApiResponse>({ success: false, error: "No autorizado" }, { status: 401 });
 

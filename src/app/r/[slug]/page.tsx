@@ -15,6 +15,7 @@ export default function RegisterClientPage({ params }: { params: Promise<{ slug:
   const [cardId, setCardId] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [googleWalletUrl, setGoogleWalletUrl] = useState<string | null>(null);
+  const [quickRegistration, setQuickRegistration] = useState(false);
 
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +25,10 @@ export default function RegisterClientPage({ params }: { params: Promise<{ slug:
     fetch(`/api/businesses/${slug}/public`)
       .then((r) => r.json())
       .then((res) => {
-        if (res.success) setBusiness(res.data);
-        else setNotFound(true);
+        if (res.success) {
+          setBusiness(res.data);
+          if (res.data.quickRegistration) setQuickRegistration(true);
+        } else setNotFound(true);
       });
   }, [slug]);
 
@@ -34,10 +37,16 @@ export default function RegisterClientPage({ params }: { params: Promise<{ slug:
     setLoading(true);
     setError(null);
 
+    const submitData = {
+      ...form,
+      ...(quickRegistration ? { name: form.name || "Cliente" } : {}),
+      businessSlug: slug,
+    };
+
     const res = await fetch("/api/customers/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, businessSlug: slug }),
+      body: JSON.stringify(submitData),
     }).then((r) => r.json());
 
     if (!res.success) {
@@ -135,46 +144,74 @@ export default function RegisterClientPage({ params }: { params: Promise<{ slug:
             </div>
           )}
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="text-sm text-gray-600 block mb-1.5 font-medium">Nombre completo *</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Tu nombre"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 block mb-1.5 font-medium">Teléfono *</label>
-              <input
-                required
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="311 123 4567"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 block mb-1.5 font-medium">Correo (opcional)</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="tu@correo.com"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold text-base hover:bg-indigo-700 disabled:opacity-50 mt-2"
-            >
-              {loading ? "Registrando..." : "Obtener mi tarjeta"}
-            </button>
-          </form>
+          {quickRegistration ? (
+            /* Quick registration: phone only */
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="text-center mb-2">
+                <p className="text-sm text-gray-500">Ingresa tu número para obtener tu tarjeta</p>
+              </div>
+              <div>
+                <input
+                  required
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-4 text-xl text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="311 123 4567"
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold text-base hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loading ? "Registrando..." : "Obtener mi tarjeta"}
+              </button>
+            </form>
+          ) : (
+            /* Full registration: name + phone + email */
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600 block mb-1.5 font-medium">Nombre completo *</label>
+                <input
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Tu nombre"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1.5 font-medium">Teléfono *</label>
+                <input
+                  required
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="311 123 4567"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1.5 font-medium">Correo (opcional)</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="tu@correo.com"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 text-white py-4 rounded-xl font-semibold text-base hover:bg-indigo-700 disabled:opacity-50 mt-2"
+              >
+                {loading ? "Registrando..." : "Obtener mi tarjeta"}
+              </button>
+            </form>
+          )}
         </div>
       ) : (
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 p-6 text-center">

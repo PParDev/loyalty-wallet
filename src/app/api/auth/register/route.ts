@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug } from "@/lib/slug";
+import { rateLimitAuth, checkRateLimit } from "@/lib/rate-limit";
 import type { ApiResponse } from "@/types";
 
 const schema = z.object({
@@ -14,6 +15,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const limited = await checkRateLimit(rateLimitAuth, req);
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const data = schema.parse(body);

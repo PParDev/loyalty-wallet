@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { DashboardStats, RecentActivity } from "@/types";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const IconUsers = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -31,6 +32,9 @@ export default function DashboardPage() {
   const [activityPage, setActivityPage] = useState(1);
   const [activityLoading, setActivityLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<Insight[]>([]);
+
+  type Insight = { id: string; type: "warning" | "success" | "info" | "danger"; icon: string; title: string; description: string; value?: string };
 
   const ACTIVITY_LIMIT = 20;
 
@@ -39,6 +43,10 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then((res) => { if (res.success) setStats(res.data); })
       .finally(() => setLoading(false));
+    
+    fetch("/api/stats/insights")
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setInsights(res.data.insights ?? []); });
   }, []);
 
   useEffect(() => {
@@ -58,9 +66,30 @@ export default function DashboardPage() {
 
   const totalPages = Math.ceil(activityTotal / ACTIVITY_LIMIT);
 
+  const insightColors = {
+    warning: "bg-amber-50 border-amber-200 text-amber-800",
+    success: "bg-green-50 border-green-200 text-green-800",
+    info: "bg-blue-50 border-blue-200 text-blue-800",
+    danger: "bg-red-50 border-red-200 text-red-800",
+  };
+
+  const dummyChartData = [
+    { name: 'Ene', visitas: 65, altas: 28 },
+    { name: 'Feb', visitas: 85, altas: 35 },
+    { name: 'Mar', visitas: 120, altas: 45 },
+    { name: 'Abr', visitas: 140, altas: 60 },
+    { name: 'May', visitas: 180, altas: 70 },
+  ];
+
   return (
     <div className="p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Resumen</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-gray-900">Resumen Analytics</h2>
+        <a href="/api/stats/export" download className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Exportar Transacciones a CSV
+        </a>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -68,6 +97,48 @@ export default function DashboardPage() {
         <StatCard label="Visitas hoy" value={stats?.visitsToday ?? 0} icon={<IconCalendar />} />
         <StatCard label="Puntos canjeados (mes)" value={stats?.pointsRedeemedThisMonth ?? 0} icon={<IconGift />} />
         <StatCard label="Clientes activos (30d)" value={stats?.activeCards ?? 0} icon={<IconCheck />} />
+      </div>
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Insights</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {insights.map((insight) => (
+              <div
+                key={insight.id}
+                className={`rounded-xl border p-4 ${insightColors[insight.type]}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-xl shrink-0">{insight.icon}</span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm">{insight.title}</p>
+                    <p className="text-xs opacity-75 mt-0.5">{insight.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gráfico Tendencias Muestra */}
+      <div className="mb-8 bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="font-semibold text-gray-900 mb-6">Tendencia de Visitas y Retención</h3>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dummyChartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 12}} dx={-10} />
+              <Tooltip
+                contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+              />
+              <Line type="monotone" dataKey="visitas" name="Visitas Totales" stroke="#4F46E5" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+              <Line type="monotone" dataKey="altas" name="Altas Nuevas" stroke="#10B981" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Actividad reciente */}
