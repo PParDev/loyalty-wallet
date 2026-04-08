@@ -485,7 +485,7 @@ export default function OnboardingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Todo listo! 🎉</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Todo listo!</h2>
                 <p className="text-gray-500 mb-6">Tu programa de lealtad está configurado. Descarga el QR y empieza a registrar clientes.</p>
               </div>
 

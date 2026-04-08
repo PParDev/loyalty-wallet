@@ -101,7 +101,7 @@ export async function GET() {
     insights.push({
       id: "at-risk",
       type: "warning",
-      icon: "⚠️",
+      icon: "alert-circle",
       title: `${atRiskCustomers} cliente${atRiskCustomers > 1 ? "s" : ""} en riesgo`,
       description: "No han vuelto en 30+ días. Envía una notificación para recuperarlos.",
       value: String(atRiskCustomers),
@@ -112,7 +112,7 @@ export async function GET() {
     insights.push({
       id: "lost",
       type: "danger",
-      icon: "🔴",
+      icon: "alert-circle",
       title: `${lostCustomers} cliente${lostCustomers > 1 ? "s" : ""} perdido${lostCustomers > 1 ? "s" : ""}`,
       description: "Sin visitar en 60+ días.",
       value: String(lostCustomers),
@@ -122,7 +122,7 @@ export async function GET() {
   insights.push({
     id: "growth",
     type: growth >= 0 ? "success" : "warning",
-    icon: growth >= 0 ? "📈" : "📉",
+    icon: growth >= 0 ? "arrow-trending-up" : "arrow-trending-down",
     title: `${newThisWeek} nuevo${newThisWeek !== 1 ? "s" : ""} esta semana`,
     description: growth !== 0 ? `${growth > 0 ? "+" : ""}${growth}% vs semana pasada` : "Igual que la semana pasada",
     value: `${growth > 0 ? "+" : ""}${growth}%`,
@@ -132,7 +132,7 @@ export async function GET() {
     insights.push({
       id: "peak-day",
       type: "info",
-      icon: "📊",
+      icon: "chart-bar",
       title: `Tu mejor día es ${dayNames[peakDayIndex]}`,
       description: `Con ${dayCounts[peakDayIndex]} visitas. Hora pico: ${peakHour}:00–${peakHour + 1}:00.`,
     });
@@ -143,7 +143,7 @@ export async function GET() {
     insights.push({
       id: "top-customer",
       type: "success",
-      icon: "⭐",
+      icon: "star",
       title: `${best.customer.name} es tu cliente más leal`,
       description: `${best.totalVisits} visitas, ${Math.floor(best.totalPointsEarned)} puntos acumulados.`,
     });
@@ -153,7 +153,7 @@ export async function GET() {
     insights.push({
       id: "redeem-rate",
       type: "info",
-      icon: "🎁",
+      icon: "gift",
       title: `Tasa de canje: ${redeemRate}%`,
       description: `De los puntos acumulados, el ${redeemRate}% se ha canjeado.`,
     });

@@ -165,7 +165,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
     const daysLeft = Math.ceil((new Date(card.pointsExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (daysLeft <= 0) return null; // ya vencidos, se reinician en la siguiente visita
     const dateStr = new Date(card.pointsExpiresAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
-    if (daysLeft <= 7) return { text: `⚠️ Tus puntos vencen el ${dateStr} (${daysLeft} días)`, urgent: true };
+    if (daysLeft <= 7) return { text: `Tus puntos vencen el ${dateStr} (${daysLeft} días)`, urgent: true };
     return { text: `Válidos hasta el ${dateStr}`, urgent: false };
   })();
 
@@ -199,7 +199,7 @@ export default function CardPage({ params }: { params: Promise<{ cardId: string 
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-gray-900"
               style={{ backgroundColor: card.tier.color }}
             >
-              ★ {card.tier.name}
+              <svg className="w-3 h-3 inline-block mr-0.5 -mt-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> {card.tier.name}
               {card.tier.multiplier > 1 && <span className="opacity-70">× {card.tier.multiplier}</span>}
             </span>
             {card.tier.benefits && (

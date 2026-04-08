@@ -88,7 +88,7 @@ export default function KioskPage() {
       <div className="flex items-center justify-between px-4 py-3 bg-black/30 border-b border-white/5 shrink-0">
         <h1 className="text-sm font-semibold text-indigo-400">LoyaltyWallet · Kiosk</h1>
         <a href="/dashboard" className="text-xs text-gray-500 hover:text-white transition-colors px-3 py-1 border border-gray-700 rounded-lg">
-          ✕ Salir
+          <svg className="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg> Salir
         </a>
       </div>
 
@@ -110,13 +110,13 @@ export default function KioskPage() {
                 onClick={() => setScanMode("camera")}
                 className={`flex-1 py-3 text-sm font-medium transition-colors ${scanMode === "camera" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"}`}
               >
-                📷 Cámara
+                <svg className="w-5 h-5 inline-block mr-1.5 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg> Cámara
               </button>
               <button
                 onClick={() => setScanMode("phone")}
                 className={`flex-1 py-3 text-sm font-medium transition-colors ${scanMode === "phone" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"}`}
               >
-                📱 Teléfono
+                <svg className="w-5 h-5 inline-block mr-1.5 align-text-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg> Teléfono
               </button>
             </div>
 
@@ -170,7 +170,7 @@ export default function KioskPage() {
                   className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs font-bold text-gray-900"
                   style={{ backgroundColor: scanResult.tier.color }}
                 >
-                  ★ {scanResult.tier.name}
+                  <svg className="w-3.5 h-3.5 -mt-0.5 inline-block mr-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> {scanResult.tier.name}
                 </span>
               )}
             </div>
@@ -180,7 +180,7 @@ export default function KioskPage() {
               onClick={handleQuickAdd}
               className="w-full bg-green-500 hover:bg-green-400 text-white text-2xl font-black py-6 rounded-2xl transition-all active:scale-95 shadow-lg shadow-green-500/25"
             >
-              {isStamps ? "✓ AGREGAR SELLO" : "+ SUMAR PUNTO"}
+              {isStamps ? <span className="flex justify-center items-center gap-2"><svg className="inline-block w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg> AGREGAR SELLO</span> : "+ SUMAR PUNTO"}
             </button>
 
             <button onClick={reset} className="text-gray-600 hover:text-gray-400 text-sm transition-colors">
